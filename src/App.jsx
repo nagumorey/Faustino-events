@@ -10,17 +10,20 @@ function App() {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Matalinong detection ng recovery mode para sa password resets
   const isRecoveryMode = useMemo(() => {
     const url = window.location.href;
     return url.includes('type=recovery') || url.includes('access_token=') || window.location.hash.includes('access_token');
   }, []);
 
+  // Function para malaman kung Admin o Client ang user
   const fetchUserRole = useCallback(async (userId) => {
     if (!userId) {
       setLoading(false);
       return;
     }
     try {
+      // Tinitingnan kung ang user ID ay nasa 'Admins' table
       const { data: adminData, error } = await supabase
         .from('Admins') 
         .select('admin_id')
@@ -31,6 +34,7 @@ function App() {
       setRole(adminData ? 'admin' : 'client');
     } catch (err) {
       console.error("Error fetching role:", err.message);
+      // Default sa client role kapag may error para hindi ma-stuck
       setRole('client'); 
     } finally {
       setLoading(false);
@@ -40,33 +44,47 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      
-      if (!mounted) return;
-
-      if (isRecoveryMode) {
-        setSession(initialSession);
+    // EMERGENCY TIMEOUT: Kung hindi natapos ang loading sa loob ng 5 seconds, 
+    // pipilitin nating ipakita ang Home page para hindi "hanging".
+    const emergencyTimer = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("Auth initialization timed out. Forcing UI to load.");
         setLoading(false);
-        return; 
       }
+    }, 5000);
 
-      if (initialSession) {
-        setSession(initialSession);
-        await fetchUserRole(initialSession.user.id);
-      } else {
-        setLoading(false);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+
+        if (isRecoveryMode) {
+          setSession(initialSession);
+          setLoading(false);
+          return; 
+        }
+
+        if (initialSession) {
+          setSession(initialSession);
+          await fetchUserRole(initialSession.user.id);
+        } else {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Initialization error:", error);
+        if (mounted) setLoading(false);
       }
     };
 
     initializeAuth();
 
+    // Pakikinig sa pagbabago ng auth state (Login/Logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
       
       setSession(currentSession);
 
-      // Ang fix: Siguradong mamamatay ang loading sa kahit anong event
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         if (currentSession && !isRecoveryMode) {
           await fetchUserRole(currentSession.user.id);
@@ -88,9 +106,11 @@ function App() {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(emergencyTimer);
     };
-  }, [fetchUserRole, isRecoveryMode]);
+  }, [fetchUserRole, isRecoveryMode, loading]);
 
+  // Loading Screen na may animation
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-black text-yellow-500 font-black tracking-widest uppercase">
@@ -102,13 +122,16 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Home Page */}
         <Route path="/" element={<Home isRecovering={isRecoveryMode} />} />
         
+        {/* Client Access Only */}
         <Route 
           path="/ClientDashboard" 
           element={session ? <ClientDashboard /> : <Navigate to="/" replace />} 
         />
         
+        {/* Admin Access Only */}
         <Route 
           path="/AdminDashboard" 
           element={
@@ -118,6 +141,7 @@ function App() {
           } 
         />
 
+        {/* Pag mali ang URL, balik sa Home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
