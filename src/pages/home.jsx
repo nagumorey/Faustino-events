@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../supabaseClient"; 
+import { supabase } from "../supabasecLient"; 
 import LoginForm from "../components/LoginForm";
 import SignupForm from "../components/SignupForm";
 import ForgotPassword from "../components/ForgotPassword";

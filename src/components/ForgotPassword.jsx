@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../supabasecLient';
 import { useNavigate } from 'react-router-dom';
 
 export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
