@@ -10,14 +10,16 @@ function App() {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Mas matalinong detection ng recovery mode
   const isRecoveryMode = useMemo(() => {
     const url = window.location.href;
     return url.includes('type=recovery') || url.includes('access_token=') || window.location.hash.includes('access_token');
   }, []);
 
   const fetchUserRole = useCallback(async (userId) => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     try {
       const { data: adminData, error } = await supabase
         .from('Admins') 
@@ -39,19 +41,16 @@ function App() {
     let mounted = true;
 
     const initializeAuth = async () => {
-      // 1. Kunin ang current session
       const { data: { session: initialSession } } = await supabase.auth.getSession();
       
       if (!mounted) return;
 
-      // 2. KUNG RECOVERY MODE: Patayin agad ang loading para lumitaw ang Home/Modal
       if (isRecoveryMode) {
         setSession(initialSession);
         setLoading(false);
         return; 
       }
 
-      // 3. Kung normal login, i-set ang session at kunin ang role
       if (initialSession) {
         setSession(initialSession);
         await fetchUserRole(initialSession.user.id);
@@ -67,24 +66,21 @@ function App() {
       
       setSession(currentSession);
 
-      if (event === 'SIGNED_IN') {
-        // Huwag mag-trigger ng role check kung nasa recovery process pa
-        if (!isRecoveryMode && currentSession) {
+      // Ang fix: Siguradong mamamatay ang loading sa kahit anong event
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        if (currentSession && !isRecoveryMode) {
           await fetchUserRole(currentSession.user.id);
         } else {
           setLoading(false);
         }
       } 
-      else if (event === 'PASSWORD_RECOVERY') {
-        setLoading(false); // Force show the recovery modal
-      }
       else if (event === 'SIGNED_OUT') {
         setRole(null);
         setSession(null);
         setLoading(false);
       }
-      else if (event === 'USER_UPDATED') {
-        // Pagkatapos ng password reset, dito babagsak
+      else {
+        // Para sa PASSWORD_RECOVERY, USER_UPDATED, etc.
         setLoading(false);
       }
     });
@@ -95,7 +91,6 @@ function App() {
     };
   }, [fetchUserRole, isRecoveryMode]);
 
-  // Loading Screen
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-black text-yellow-500 font-black tracking-widest uppercase">
@@ -107,7 +102,6 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* IsRecovering prop is critical for Home.js logic */}
         <Route path="/" element={<Home isRecovering={isRecoveryMode} />} />
         
         <Route 
@@ -124,7 +118,6 @@ function App() {
           } 
         />
 
-        {/* Catch-all para iwas 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
