@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { supabase } from './supabaseclient'; 
+import { supabase } from './supabaseClient'; 
 import Home from './pages/home'; 
 import ClientDashboard from './pages/Dashboard'; 
 import AdminDashboard from './pages/AdminDashboard'; 
