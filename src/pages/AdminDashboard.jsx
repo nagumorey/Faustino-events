@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabasecLient';
+import { supabase } from '../supabaseclient';
 import { LayoutDashboard, Users, Calendar, Settings, LogOut, Star, CreditCard } from 'lucide-react';
 
 const AdminDashboard = () => {
