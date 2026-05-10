@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient"; // Siguraduhing tama ang path base sa image_5aa1ae.png
+import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { LogOut, ArrowRight, Search, X } from "lucide-react";
 
-const ClientDashboard = () => {
+const ClientDashboard = ({ isGuest }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,57 +42,81 @@ const ClientDashboard = () => {
     }
   ];
 
+  // --- SECURITY & SESSION CHECK ---
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
+    let isMounted = true;
 
+    const verifyUser = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        // GUEST MODE LOGIC: Kung guest, wag i-redirect, ipakita lang ang dashboard
         if (!session) {
-          setUser(null);
+          if (isMounted) {
+            setUser(null);
+            setLoading(false);
+          }
           return;
         }
 
-        // VERIFY ROLE: Chine-check kung Admin ang nag-login
+        // ROLE CHECK: Siguraduhin na hindi Admin ang napadpad dito
         const { data: adminData } = await supabase
           .from('Admins')
           .select('admin_id')
           .eq('admin_id', session.user.id)
           .maybeSingle();
 
-        if (adminData) {
-          navigate("/AdminDashboard", { replace: true });
-        } else {
-          setUser(session.user);
+        if (isMounted) {
+          if (adminData) {
+            navigate("/AdminDashboard", { replace: true });
+          } else {
+            setUser(session.user);
+            setLoading(false);
+          }
         }
       } catch (error) {
-        console.error("Auth error details:", error);
-      } finally {
-        // IDINAGDAG: Kahit mag-error o mag-success, ititigil ang loading state
-        setLoading(false);
+        console.error("Dashboard Auth Error:", error);
+        if (isMounted) setLoading(false);
       }
     };
 
-    checkUser();
+    verifyUser();
 
+    // AUTH LISTENER
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
-        setUser(null);
-        navigate("/");
+        if (isMounted) {
+          setUser(null);
+          // Wag i-navigate sa "/" para manatili sa Guest View ng packages
+          setLoading(false);
+        }
       } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        checkUser();
+        verifyUser();
       }
     });
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.clear(); // Siguradong malinis ang session
-    window.location.replace("/"); 
+    try {
+      await supabase.auth.signOut();
+      localStorage.clear();
+      // Navigate to Home after logout
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Logout error:", error);
+      navigate("/");
+    }
   };
 
   const handleBooking = (packageName) => {
+    // Check if truly a guest (no user and no session)
     if (!user) {
       alert("Please login first to book a package.");
       navigate("/"); 
@@ -101,11 +125,12 @@ const ClientDashboard = () => {
     }
   };
 
+  // --- LOADING SCREEN ---
   if (loading) return (
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-8 h-8 border-4 border-[#B8860B] border-t-transparent rounded-full animate-spin"></div>
-        <span className="text-[#B8860B] font-black uppercase tracking-widest text-[10px]">Loading Faustino Events...</span>
+        <div className="w-10 h-10 border-4 border-[#B8860B] border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-[#B8860B] font-black uppercase tracking-[0.3em] text-[10px]">Syncing Faustino Events...</span>
       </div>
     </div>
   );
@@ -125,12 +150,15 @@ const ClientDashboard = () => {
           
           <div className="flex items-center gap-8">
             {user ? (
-              <button 
-                onClick={handleLogout} 
-                className="text-[10px] font-black text-slate-400 hover:text-red-600 flex items-center gap-2 transition-all uppercase tracking-[0.2em]"
-              >
-                LOGOUT <LogOut size={14} />
-              </button>
+              <div className="flex items-center gap-6">
+                <span className="text-[10px] font-bold text-slate-400 hidden md:block">{user.email}</span>
+                <button 
+                  onClick={handleLogout} 
+                  className="text-[10px] font-black text-slate-400 hover:text-red-600 flex items-center gap-2 transition-all uppercase tracking-[0.2em]"
+                >
+                  LOGOUT <LogOut size={14} />
+                </button>
+              </div>
             ) : (
               <button 
                 onClick={() => navigate("/")} 
@@ -143,6 +171,7 @@ const ClientDashboard = () => {
         </div>
       </nav>
 
+      {/* --- MAIN CONTENT --- */}
       <main className="max-w-7xl mx-auto p-8 md:p-16">
         <header className="mb-20 flex flex-col md:flex-row justify-between items-end gap-10">
             <div>

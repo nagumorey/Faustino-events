@@ -23,8 +23,7 @@ function Home({ isRecovering }) {
     window.history.replaceState(null, null, window.location.pathname);
   };
 
-  // 3. useLayoutEffect: Ito ang secret weapon. 
-  // Sinisigurado nito na bago mag-paint ang browser, naka-check na ang recovery status.
+  // 3. useLayoutEffect: Para bago mag-render, alam na ang recovery status
   useLayoutEffect(() => {
     if (isRecovering) {
       setShowAuth(true);
@@ -132,8 +131,10 @@ function Home({ isRecovering }) {
         </div>
       </nav>
 
+      {/* MAIN LAYOUT */}
       {!showAuth ? (
         <>
+          {/* HERO SECTION */}
           <section id="home" className="relative h-screen flex flex-col items-center justify-center text-center px-6">
             <div className="absolute inset-0 z-0">
               <img src={EVL} alt="Hero" className="w-full h-full object-cover opacity-30" />
@@ -145,6 +146,7 @@ function Home({ isRecovering }) {
             </div>
           </section>
 
+          {/* ABOUT SECTION */}
           <section id="about" className="py-32 px-12 bg-black min-h-[70vh] flex items-center">
             <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
               <div className="flex justify-center">
@@ -159,14 +161,20 @@ function Home({ isRecovering }) {
                   <p className="text-gray-400 text-[12px] leading-relaxed max-w-sm font-light">Faustino's Event Place is dedicated to providing a sophisticated backdrop for life's most precious milestones.</p>
                 </div>
                 <div className="flex gap-10 pt-2">
-                  <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div><span className="text-[9px] font-black uppercase tracking-widest text-gray-200">500 Guest Capacity</span></div>
-                  <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div><span className="text-[9px] font-black uppercase tracking-widest text-gray-200">Full Catering</span></div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-200">500 Guest Capacity</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-200">Full Catering</span>
+                  </div>
                 </div>
               </div>
             </div>
           </section>
           
-          {/* Celebrations/Packages Section */}
+          {/* CELEBRATIONS SECTION */}
           <section id="celebrations" className="py-24 px-12 bg-black border-t border-white/5">
              <div className="text-center mb-16 space-y-2">
                <h2 className="text-4xl md:text-5xl font-serif italic text-yellow-500">Our Packages</h2>
@@ -185,7 +193,6 @@ function Home({ isRecovering }) {
       ) : (
         /* AUTH OVERLAY */
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
-          {/* Prevent closing if in recovery mode unless explicit "Back to Home" click */}
           <div className="absolute inset-0" onClick={() => { if(!isRecovering) setShowAuth(false); }} />
           
           <div className="relative w-full max-w-md bg-[#111] p-10 rounded-2xl border border-white/10 shadow-2xl">

@@ -10,20 +10,14 @@ function App() {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Matalinong detection ng recovery mode para sa password resets
   const isRecoveryMode = useMemo(() => {
     const url = window.location.href;
     return url.includes('type=recovery') || url.includes('access_token=') || window.location.hash.includes('access_token');
   }, []);
 
-  // Function para malaman kung Admin o Client ang user
   const fetchUserRole = useCallback(async (userId) => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
+    if (!userId) return;
     try {
-      // Tinitingnan kung ang user ID ay nasa 'Admins' table
       const { data: adminData, error } = await supabase
         .from('Admins') 
         .select('admin_id')
@@ -34,24 +28,17 @@ function App() {
       setRole(adminData ? 'admin' : 'client');
     } catch (err) {
       console.error("Error fetching role:", err.message);
-      // Default sa client role kapag may error para hindi ma-stuck
       setRole('client'); 
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     let mounted = true;
 
-    // EMERGENCY TIMEOUT: Kung hindi natapos ang loading sa loob ng 5 seconds, 
-    // pipilitin nating ipakita ang Home page para hindi "hanging".
+    // 1. Emergency timer para hindi ma-stuck sa loading screen
     const emergencyTimer = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn("Auth initialization timed out. Forcing UI to load.");
-        setLoading(false);
-      }
-    }, 5000);
+      if (mounted && loading) setLoading(false);
+    }, 1500);
 
     const initializeAuth = async () => {
       try {
@@ -59,48 +46,36 @@ function App() {
         
         if (!mounted) return;
 
-        if (isRecoveryMode) {
-          setSession(initialSession);
-          setLoading(false);
-          return; 
-        }
-
         if (initialSession) {
           setSession(initialSession);
-          await fetchUserRole(initialSession.user.id);
-        } else {
-          setLoading(false);
+          fetchUserRole(initialSession.user.id);
         }
       } catch (error) {
-        console.error("Initialization error:", error);
+        console.error("Auth error:", error);
+      } finally {
         if (mounted) setLoading(false);
       }
     };
 
     initializeAuth();
 
-    // Pakikinig sa pagbabago ng auth state (Login/Logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!mounted) return;
       
       setSession(currentSession);
 
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        if (currentSession && !isRecoveryMode) {
-          await fetchUserRole(currentSession.user.id);
-        } else {
-          setLoading(false);
-        }
+      if (event === 'SIGNED_IN' && currentSession) {
+        if (!isRecoveryMode) fetchUserRole(currentSession.user.id);
+        setLoading(false); 
       } 
-      else if (event === 'SIGNED_OUT') {
+      
+      if (event === 'SIGNED_OUT') {
         setRole(null);
         setSession(null);
         setLoading(false);
       }
-      else {
-        // Para sa PASSWORD_RECOVERY, USER_UPDATED, etc.
-        setLoading(false);
-      }
+
+      setLoading(false);
     });
 
     return () => {
@@ -108,13 +83,12 @@ function App() {
       subscription.unsubscribe();
       clearTimeout(emergencyTimer);
     };
-  }, [fetchUserRole, isRecoveryMode, loading]);
+  }, [fetchUserRole, isRecoveryMode]); 
 
-  // Loading Screen na may animation
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-black text-yellow-500 font-black tracking-widest uppercase">
-        <div className="animate-pulse">Faustino Events...</div>
+      <div className="h-screen flex items-center justify-center bg-black text-[#D4AF37] font-bold tracking-widest uppercase">
+        <div className="animate-pulse italic">FAUSTINO'S...</div>
       </div>
     );
   }
@@ -122,26 +96,20 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Home Page */}
         <Route path="/" element={<Home isRecovering={isRecoveryMode} />} />
         
-        {/* Client Access Only */}
+        {/* CLIENT DASHBOARD: Pwedeng pasukin kahit walang session (Guest Mode) */}
         <Route 
           path="/ClientDashboard" 
-          element={session ? <ClientDashboard /> : <Navigate to="/" replace />} 
+          element={<ClientDashboard isGuest={!session} />} 
         />
         
-        {/* Admin Access Only */}
+        {/* ADMIN DASHBOARD: Strict access para sa Admin lang */}
         <Route 
           path="/AdminDashboard" 
-          element={
-            session && role === 'admin' 
-              ? <AdminDashboard /> 
-              : <Navigate to="/" replace />
-          } 
+          element={session && (role === 'admin' || role === null) ? <AdminDashboard /> : <Navigate to="/" replace />} 
         />
 
-        {/* Pag mali ang URL, balik sa Home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

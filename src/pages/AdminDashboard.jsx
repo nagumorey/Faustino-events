@@ -1,46 +1,51 @@
-import React, { useState, useEffect } from 'react'; // Idinagdag ang useEffect
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { LayoutDashboard, Users, Calendar, Settings, LogOut, Star, CreditCard } from 'lucide-react';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true); // Idinagdag na Loading State
+  const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // SECURITY CHECK: Sisiguraduhin na Admin lang ang pwedeng tumingin dito
+  // SECURITY CHECK: Mas pinalakas na logic
   useEffect(() => {
+    let isMounted = true; // Para maiwasan ang memory leaks
+
     const checkAdmin = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (!session) {
-          navigate("/", { replace: true });
+        if (sessionError || !session) {
+          console.log("No session found, redirecting to login...");
+          if (isMounted) navigate("/", { replace: true });
           return;
         }
 
         // Chine-check kung nasa 'Admins' table ang user ID
-        const { data: adminData } = await supabase
+        const { data: adminData, error: dbError } = await supabase
           .from('Admins')
           .select('admin_id')
           .eq('admin_id', session.user.id)
           .maybeSingle();
 
-        if (!adminData) {
-          // Kung hindi admin, itatapon sa Client Dashboard o Home
-          navigate("/ClientDashboard", { replace: true });
+        if (dbError || !adminData) {
+          console.log("Not an admin, redirecting to Client Dashboard...");
+          if (isMounted) navigate("/ClientDashboard", { replace: true });
         }
       } catch (error) {
         console.error("Admin check error:", error);
-        navigate("/", { replace: true });
+        if (isMounted) navigate("/", { replace: true });
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false); // Dito natin papatayin ang loading maski anong mangyari
       }
     };
 
     checkAdmin();
+
+    return () => { isMounted = false; };
   }, [navigate]);
 
   const stats = [
@@ -56,6 +61,8 @@ const AdminDashboard = () => {
     if (!error) {
       alert("Account updated successfully.");
       setIsSettingsOpen(false);
+    } else {
+      alert("Update failed: " + error.message);
     }
   };
 
@@ -63,26 +70,27 @@ const AdminDashboard = () => {
     try {
       await supabase.auth.signOut();
       localStorage.clear();
-      window.location.replace("/"); 
+      navigate("/", { replace: true }); // Mas safe kesa window.location
     } catch (error) {
-      window.location.replace("/");
+      navigate("/", { replace: true });
     }
   };
 
-  // Habang chine-check pa ang credentials, ito ang ipapakita
+  // --- LOADING SCREEN ---
   if (loading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+      <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p className="text-white text-[10px] font-bold tracking-[0.3em] uppercase opacity-50">Verifying Admin Access...</p>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex font-sans text-slate-800">
-      {/* SIDEBAR */}
+      {/* SIDEBAR - Keep your existing JSX here... */}
       <aside className="w-64 bg-black p-6 flex flex-col shadow-xl">
         <div className="mb-10 px-2">
-           <h2 className="text-white font-black tracking-tighter text-xl italic">FAUSTINO'S</h2>
-           <p className="text-[10px] text-slate-500 font-bold tracking-widest mt-1 uppercase">Admin Panel</p>
+            <h2 className="text-white font-black tracking-tighter text-xl italic">FAUSTINO'S</h2>
+            <p className="text-[10px] text-slate-500 font-bold tracking-widest mt-1 uppercase">Admin Panel</p>
         </div>
 
         <nav className="space-y-2 flex-1">
@@ -110,7 +118,7 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN CONTENT - Keep your existing JSX here... */}
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-center mb-10 bg-black text-white p-4 rounded-xl shadow-lg">
           <h2 className="text-xs font-bold tracking-[0.3em] uppercase ml-4">EMS Dashboard</h2>
@@ -141,23 +149,10 @@ const AdminDashboard = () => {
             </div>
           ))}
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 min-h-[300px] flex flex-col items-center justify-center">
-            <Calendar size={40} className="text-slate-200 mb-4" />
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">No Scheduled Events</p>
-          </div>
-          
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 min-h-[300px]">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 mb-6 border-b border-slate-50 pb-4">Upcoming Schedule</h3>
-            <div className="flex flex-col items-center justify-center h-full pb-10">
-              <p className="text-slate-300 text-[10px] font-bold uppercase tracking-widest">Database is empty</p>
-            </div>
-          </div>
-        </div>
+        {/* ... (rest of your layout) */}
       </main>
 
-      {/* SETTINGS MODAL */}
+      {/* SETTINGS MODAL - Keep your existing JSX here... */}
       {isSettingsOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-[100]">
           <div className="bg-white w-full max-w-xs p-8 rounded-[2.5rem] shadow-2xl">
