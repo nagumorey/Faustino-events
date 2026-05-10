@@ -1,15 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Idinagdag ang useEffect
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { LayoutDashboard, Users, Calendar, Settings, LogOut, Star, CreditCard } from 'lucide-react';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true); // Idinagdag na Loading State
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Ginamit natin ang structure pero ginawa nating placeholder/zero muna ang values
+  // SECURITY CHECK: Sisiguraduhin na Admin lang ang pwedeng tumingin dito
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          navigate("/", { replace: true });
+          return;
+        }
+
+        // Chine-check kung nasa 'Admins' table ang user ID
+        const { data: adminData } = await supabase
+          .from('Admins')
+          .select('admin_id')
+          .eq('admin_id', session.user.id)
+          .maybeSingle();
+
+        if (!adminData) {
+          // Kung hindi admin, itatapon sa Client Dashboard o Home
+          navigate("/ClientDashboard", { replace: true });
+        }
+      } catch (error) {
+        console.error("Admin check error:", error);
+        navigate("/", { replace: true });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAdmin();
+  }, [navigate]);
+
   const stats = [
     { label: "Bookings", value: "0", icon: <Calendar size={18} />, color: "bg-red-500" },
     { label: "Events", value: "0", icon: <Star size={18} />, color: "bg-green-500" },
@@ -26,28 +59,26 @@ const AdminDashboard = () => {
     }
   };
 
-  // FIX: Saktong logout logic para mag-update ang Home Navbar
   const handleLogout = async () => {
     try {
-      // 1. Patayin ang session sa Supabase server
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
-      // 2. Linisin ang local storage para siguradong malinis ang session state
+      await supabase.auth.signOut();
       localStorage.clear();
-
-      // 3. Force refresh pabalik sa Home para mag-re-render ang Navbar
       window.location.replace("/"); 
     } catch (error) {
-      console.error('Logout error:', error.message);
       window.location.replace("/");
     }
   };
 
+  // Habang chine-check pa ang credentials, ito ang ipapakita
+  if (loading) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex font-sans text-slate-800">
-      
-      {/* SIDEBAR - Luxury Black Sidebar */}
+      {/* SIDEBAR */}
       <aside className="w-64 bg-black p-6 flex flex-col shadow-xl">
         <div className="mb-10 px-2">
            <h2 className="text-white font-black tracking-tighter text-xl italic">FAUSTINO'S</h2>
@@ -73,7 +104,6 @@ const AdminDashboard = () => {
           <button onClick={() => setIsSettingsOpen(true)} className="flex items-center gap-3 w-full p-3 text-slate-400 hover:text-white text-[11px] font-bold uppercase tracking-widest">
             <Settings size={16} /> Settings
           </button>
-          {/* UPDATED: Tinatawag na ang handleLogout dito */}
           <button onClick={handleLogout} className="flex items-center gap-3 w-full p-3 text-slate-500 hover:text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors">
             <LogOut size={16} /> Logout
           </button>
@@ -82,7 +112,6 @@ const AdminDashboard = () => {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 p-8 overflow-y-auto">
-        {/* TOP BLACK HEADER STRIP */}
         <header className="flex justify-between items-center mb-10 bg-black text-white p-4 rounded-xl shadow-lg">
           <h2 className="text-xs font-bold tracking-[0.3em] uppercase ml-4">EMS Dashboard</h2>
           <div className="mr-4 flex items-center gap-2">
@@ -91,13 +120,11 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        {/* WELCOME SECTION */}
         <div className="mb-10">
           <h1 className="text-4xl font-serif font-bold text-[#1e293b]">Welcome Admin!</h1>
           <p className="text-slate-400 text-sm mt-1 font-medium italic">Manage your events, bookings, and analytics from this panel.</p>
         </div>
 
-        {/* STATS CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           {stats.map((s, i) => (
             <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-all group">
@@ -115,7 +142,6 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* CALENDAR & LIST PLACEHOLDERS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 min-h-[300px] flex flex-col items-center justify-center">
             <Calendar size={40} className="text-slate-200 mb-4" />

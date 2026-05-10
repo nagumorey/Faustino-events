@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../supabaseClient"; // Siguraduhing tama ang path base sa image_5aa1ae.png
 import { useNavigate } from "react-router-dom";
 import { LogOut, ArrowRight, Search, X } from "lucide-react";
 
@@ -12,7 +12,6 @@ const ClientDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
 
-  // Static Data (Maari mong ilipat sa Supabase table balang araw para dynamic)
   const eventPackages = [
     { 
       id: 1, 
@@ -48,14 +47,12 @@ const ClientDashboard = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
-        // GUEST MODE: Hayaan lang sa dashboard
         if (!session) {
           setUser(null);
-          setLoading(false);
           return;
         }
 
-        // VERIFY ROLE: Baka admin ang pumasok sa client dashboard
+        // VERIFY ROLE: Chine-check kung Admin ang nag-login
         const { data: adminData } = await supabase
           .from('Admins')
           .select('admin_id')
@@ -68,18 +65,19 @@ const ClientDashboard = () => {
           setUser(session.user);
         }
       } catch (error) {
-        console.error("Auth error:", error);
+        console.error("Auth error details:", error);
       } finally {
+        // IDINAGDAG: Kahit mag-error o mag-success, ititigil ang loading state
         setLoading(false);
       }
     };
 
     checkUser();
 
-    // Listen sa Auth Changes (Logout/Login)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         setUser(null);
+        navigate("/");
       } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         checkUser();
       }
@@ -90,13 +88,14 @@ const ClientDashboard = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/");
+    localStorage.clear(); // Siguradong malinis ang session
+    window.location.replace("/"); 
   };
 
   const handleBooking = (packageName) => {
     if (!user) {
       alert("Please login first to book a package.");
-      navigate("/"); // Ibalik sa home para lumabas ang Sign In modal
+      navigate("/"); 
     } else {
       navigate("/book-now", { state: { selectedType: packageName } });
     }
@@ -106,7 +105,7 @@ const ClientDashboard = () => {
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="w-8 h-8 border-4 border-[#B8860B] border-t-transparent rounded-full animate-spin"></div>
-        <span className="text-[#B8860B] font-black uppercase tracking-widest text-[10px]">Loading Packages...</span>
+        <span className="text-[#B8860B] font-black uppercase tracking-widest text-[10px]">Loading Faustino Events...</span>
       </div>
     </div>
   );
@@ -145,7 +144,6 @@ const ClientDashboard = () => {
       </nav>
 
       <main className="max-w-7xl mx-auto p-8 md:p-16">
-        {/* --- HEADER --- */}
         <header className="mb-20 flex flex-col md:flex-row justify-between items-end gap-10">
             <div>
                <h1 className="text-6xl md:text-8xl font-black text-black uppercase tracking-tighter leading-[0.85]">
@@ -168,7 +166,6 @@ const ClientDashboard = () => {
             </div>
         </header>
         
-        {/* --- GRID --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {eventPackages
             .filter((pkg) => pkg.title.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -181,7 +178,6 @@ const ClientDashboard = () => {
                     alt={pkg.title} 
                     onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=1000&auto=format&fit=crop'; }}
                  />
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </div>
 
               <div className="p-10 flex flex-col flex-1">
@@ -209,19 +205,18 @@ const ClientDashboard = () => {
       {/* --- MODAL SECTION --- */}
       {isModalOpen && selectedPackage && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-md transition-opacity" onClick={() => setIsModalOpen(false)}></div>
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setIsModalOpen(false)}></div>
           
-          <div className="bg-white rounded-[3rem] w-full max-w-4xl relative z-10 overflow-hidden shadow-[0_0_100px_-20px_rgba(0,0,0,0.5)] flex flex-col md:flex-row animate-in fade-in zoom-in duration-300">
+          <div className="bg-white rounded-[3rem] w-full max-w-4xl relative z-10 overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in fade-in zoom-in duration-300">
             <button 
               onClick={() => setIsModalOpen(false)} 
-              className="absolute top-8 right-8 w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-[#B8860B] transition-colors z-20 shadow-xl"
+              className="absolute top-8 right-8 w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-[#B8860B] transition-colors z-20"
             >
               <X size={20} />
             </button>
 
             <div className="w-full md:w-1/2 h-80 md:h-auto relative overflow-hidden">
               <img src={selectedPackage.img} className="w-full h-full object-cover" alt={selectedPackage.title} />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent"></div>
             </div>
 
             <div className="p-12 md:w-1/2 flex flex-col bg-white">
@@ -230,12 +225,12 @@ const ClientDashboard = () => {
                 <h2 className="text-4xl font-black text-black uppercase tracking-tighter leading-none">{selectedPackage.title}</h2>
               </div>
 
-              <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar">
-                <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-6 italic underline decoration-[#B8860B]/30 underline-offset-4">Inclusions & Services</h4>
+              <div className="flex-1 overflow-y-auto pr-4">
+                <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-6">Inclusions & Services</h4>
                 <ul className="space-y-4 mb-10">
                   {selectedPackage.fullDetails.map((item, index) => (
                     <li key={index} className="text-[11px] font-bold text-slate-600 flex items-start gap-4">
-                      <span className="w-5 h-5 bg-slate-50 text-[#B8860B] rounded-full flex items-center justify-center text-[8px] flex-shrink-0 border border-[#B8860B]/10">{index + 1}</span>
+                      <span className="w-5 h-5 bg-slate-50 text-[#B8860B] rounded-full flex items-center justify-center text-[8px] flex-shrink-0">{index + 1}</span>
                       <span className="mt-0.5">{item}</span>
                     </li>
                   ))}
@@ -249,7 +244,7 @@ const ClientDashboard = () => {
                 </div>
                 <button 
                   onClick={() => handleBooking(selectedPackage.title)}
-                  className="bg-black text-white px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-[#B8860B] hover:-translate-y-1 transition-all active:translate-y-0 shadow-2xl shadow-black/20"
+                  className="bg-black text-white px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-[#B8860B] transition-all shadow-2xl"
                 >
                   RESERVE NOW
                 </button>
