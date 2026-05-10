@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-// I-hardcode muna natin para ma-test kung gagana ang connection
-const supabaseUrl = 'https://ekqixbskebdsjftlprwm.supabase.co'
-const supabaseAnonKey = 'sb_publishable_yAMill8Cs_Stj7NFPBm9cQ_bhbRS11O' // I-paste mo rito 'yung buong Publishable key mo
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
