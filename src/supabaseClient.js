@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Gamitin natin ang import.meta.env para basahin ang settings sa Vercel
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// I-hardcode muna natin para ma-test kung gagana ang connection
+const supabaseUrl = 'https://ekqixbskebdsjftlpdwm.supabase.co'
+const supabaseAnonKey = 'sb_publishable_yAMill8Cs_Stj7NF...' // I-paste mo rito 'yung buong Publishable key mo
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
