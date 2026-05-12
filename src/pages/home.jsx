@@ -13,12 +13,28 @@ function Home({ isRecovering }) {
   const navigate = useNavigate();
   
   const getHasToken = () => {
-    return window.location.hash.includes('access_token') || window.location.href.includes('access_token');
+    const hash = window.location.hash;
+    const search = window.location.search;
+    return hash.includes('access_token') || 
+           hash.includes('type=recovery') || 
+           search.includes('access_token') ||
+           search.includes('type=recovery');
   };
   
   const [showAuth, setShowAuth] = useState(isRecovering || getHasToken());
   const [activeTab, setActiveTab] = useState((isRecovering || getHasToken()) ? 'forgot' : 'login');
   const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      if (getHasToken() && activeTab !== 'forgot') {
+        setShowAuth(true);
+        setActiveTab('forgot');
+        clearInterval(checkInterval);
+      }
+    }, 500);
+    return () => clearInterval(checkInterval);
+  }, [activeTab]);
 
   const handleNavAction = useCallback((type) => {
     if (getHasToken()) return;
