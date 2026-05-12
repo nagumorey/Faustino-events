@@ -12,14 +12,16 @@ import Debut from "../assets/Debut.jpg";
 function Home({ isRecovering }) { 
   const navigate = useNavigate();
   
-  const hasToken = window.location.hash.includes('access_token');
+  const getHasToken = () => {
+    return window.location.hash.includes('access_token') || window.location.href.includes('access_token');
+  };
   
-  const [showAuth, setShowAuth] = useState(isRecovering || hasToken);
-  const [activeTab, setActiveTab] = useState((isRecovering || hasToken) ? 'forgot' : 'login');
+  const [showAuth, setShowAuth] = useState(isRecovering || getHasToken());
+  const [activeTab, setActiveTab] = useState((isRecovering || getHasToken()) ? 'forgot' : 'login');
   const [session, setSession] = useState(null);
 
   const handleNavAction = useCallback((type) => {
-    if (window.location.hash.includes('access_token')) return;
+    if (getHasToken()) return;
     
     if (type === 'home') {
       setShowAuth(false);
@@ -29,7 +31,7 @@ function Home({ isRecovering }) {
   }, []);
 
   useLayoutEffect(() => {
-    if (isRecovering || window.location.hash.includes('access_token')) {
+    if (isRecovering || getHasToken()) {
       setShowAuth(true);
       setActiveTab('forgot');
     }
@@ -152,7 +154,6 @@ function Home({ isRecovering }) {
           <div className="w-full h-[450px] rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 relative group">
             <iframe
               title="Faustino's Event Place Location"
-              /* Updated src with the correct coordinates for 54 Tahimik St. to show the red marker */
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3864.5516!2d120.9333!3d14.4103!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397d28ccbc9dd0d%3A0x12012061404c6c05!2s54%20Tahimik%20St%2C%20Imus%2C%20Cavite!5e0!3m2!1sen!2sph!4v1715560000000!5m2!1sen!2sph" 
               width="100%"
               height="100%"
@@ -178,7 +179,7 @@ function Home({ isRecovering }) {
       {showAuth && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => { 
-            if(!window.location.hash.includes('access_token')) setShowAuth(false); 
+            if(!getHasToken()) setShowAuth(false); 
           }} />
           <div className="relative w-full max-w-md bg-[#111] p-10 rounded-2xl border border-white/10 shadow-2xl">
             {activeTab !== 'forgot' && (
@@ -193,9 +194,9 @@ function Home({ isRecovering }) {
               {activeTab === 'forgot' && (
                 <ForgotPassword 
                   isOpen={true} 
-                  isRecoveryMode={isRecovering || window.location.hash.includes('access_token')} 
+                  isRecoveryMode={isRecovering || getHasToken()} 
                   onClose={() => { 
-                    if (!window.location.hash.includes('access_token')) {
+                    if (!getHasToken()) {
                        setShowAuth(false); 
                        setActiveTab('login'); 
                        window.history.replaceState(null, null, window.location.pathname);
@@ -204,7 +205,7 @@ function Home({ isRecovering }) {
                 />
               )}
             </div>
-            {!window.location.hash.includes('access_token') && (
+            {!getHasToken() && (
                <button onClick={() => { setShowAuth(false); setActiveTab('login'); }} className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest">Back to Home</button>
             )}
           </div>
