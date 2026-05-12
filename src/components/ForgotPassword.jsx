@@ -11,14 +11,20 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fullUrl = window.location.href;
-    if (fullUrl.includes('access_token') || fullUrl.includes('recovery') || window.location.hash.includes('type=recovery')) {
-      setStep('update');
-      if (onForceOpen) onForceOpen();
-    }
+    const handleUrlHash = () => {
+      const hash = window.location.hash;
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      if (hash.includes('type=recovery') || hash.includes('access_token') || urlParams.get('type') === 'recovery') {
+        setStep('update');
+        if (onForceOpen) onForceOpen();
+      }
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+    handleUrlHash();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && window.location.hash.includes('access_token'))) {
         setStep('update');
         if (onForceOpen) onForceOpen();
       }
