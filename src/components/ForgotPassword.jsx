@@ -47,7 +47,7 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/?type=recovery`, 
+        redirectTo: 'https://faustino-events-gqgy.vercel.app/', 
       });
       if (error) throw error;
       alert("Reset link sent!");
