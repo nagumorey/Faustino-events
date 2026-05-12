@@ -13,28 +13,25 @@ function Home({ isRecovering }) {
   const navigate = useNavigate();
   
   const getHasToken = () => {
-    const hash = window.location.hash;
-    const search = window.location.search;
-    return hash.includes('access_token') || 
-           hash.includes('type=recovery') || 
-           search.includes('access_token') ||
-           search.includes('type=recovery');
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    
+    return hashParams.has('access_token') || 
+           urlParams.has('access_token') || 
+           window.location.href.includes('type=recovery') ||
+           isRecovering;
   };
   
-  const [showAuth, setShowAuth] = useState(isRecovering || getHasToken());
-  const [activeTab, setActiveTab] = useState((isRecovering || getHasToken()) ? 'forgot' : 'login');
+  const [showAuth, setShowAuth] = useState(getHasToken());
+  const [activeTab, setActiveTab] = useState(getHasToken() ? 'forgot' : 'login');
   const [session, setSession] = useState(null);
 
   useEffect(() => {
-    const checkInterval = setInterval(() => {
-      if (getHasToken() && activeTab !== 'forgot') {
-        setShowAuth(true);
-        setActiveTab('forgot');
-        clearInterval(checkInterval);
-      }
-    }, 500);
-    return () => clearInterval(checkInterval);
-  }, [activeTab]);
+    if (getHasToken()) {
+      setShowAuth(true);
+      setActiveTab('forgot');
+    }
+  }, []);
 
   const handleNavAction = useCallback((type) => {
     if (getHasToken()) return;
@@ -47,7 +44,7 @@ function Home({ isRecovering }) {
   }, []);
 
   useLayoutEffect(() => {
-    if (isRecovering || getHasToken()) {
+    if (getHasToken()) {
       setShowAuth(true);
       setActiveTab('forgot');
     }
@@ -210,7 +207,7 @@ function Home({ isRecovering }) {
               {activeTab === 'forgot' && (
                 <ForgotPassword 
                   isOpen={true} 
-                  isRecoveryMode={isRecovering || getHasToken()} 
+                  isRecoveryMode={getHasToken()} 
                   onClose={() => { 
                     if (!getHasToken()) {
                        setShowAuth(false); 
