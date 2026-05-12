@@ -101,13 +101,13 @@ function Home({ isRecovering }) {
         <div className="flex gap-3">
           {!session ? (
             <>
-              <button onClick={() => { setShowAuth(true); setActiveTab('signup'); }} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all">Sign Up</button>
-              <button onClick={() => { setShowAuth(true); setActiveTab('login'); }} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all">Log In</button>
+              <button onClick={() => { setShowAuth(true); setActiveTab('signup'); }} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Sign Up</button>
+              <button onClick={() => { setShowAuth(true); setActiveTab('login'); }} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Log In</button>
             </>
           ) : (
             <div className="flex gap-3">
-              <button onClick={() => navigate(session.user.email.includes('admin') ? '/AdminDashboard' : '/ClientDashboard')} className="text-[10px] font-black uppercase tracking-widest bg-white text-black px-6 py-3 rounded-md active:scale-95 transition-all">Dashboard</button>
-              <button onClick={handleLogout} className="text-[10px] font-black uppercase tracking-widest border border-white/20 text-white px-6 py-3 rounded-md active:scale-95 transition-all">Logout</button>
+              <button onClick={() => navigate(session.user.email.includes('admin') ? '/AdminDashboard' : '/ClientDashboard')} className="text-[10px] font-black uppercase tracking-widest bg-white text-black px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Dashboard</button>
+              <button onClick={handleLogout} className="text-[10px] font-black uppercase tracking-widest border border-white/20 text-white px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Logout</button>
             </div>
           )}
         </div>
@@ -190,35 +190,37 @@ function Home({ isRecovering }) {
 
       {showAuth && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
-          <div className="absolute inset-0" onClick={() => { 
+          <div className="absolute inset-0 z-0" onClick={() => { 
             if(!getHasToken()) setShowAuth(false); 
           }} />
           
-          {activeTab === 'forgot' ? (
-             <ForgotPassword 
+          <div className="relative z-10 w-full max-w-md">
+            {activeTab === 'forgot' ? (
+              <ForgotPassword 
                 isOpen={true} 
-                isRecoveryMode={getHasToken()} 
+                onForceOpen={() => setShowAuth(true)}
                 onClose={() => { 
                   if (!getHasToken()) {
-                     setShowAuth(false); 
-                     setActiveTab('login'); 
-                     window.history.replaceState(null, null, window.location.pathname);
+                    setShowAuth(false); 
+                    setActiveTab('login'); 
+                    window.history.replaceState(null, null, window.location.pathname);
                   }
                 }} 
               />
-          ) : (
-            <div className="relative w-full max-w-md bg-[#111] p-10 rounded-2xl border border-white/10 shadow-2xl">
-              <div className="flex justify-center gap-8 mb-8 border-b border-white/5 pb-4">
-                <button onClick={() => setActiveTab('login')} className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'login' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Log In</button>
-                <button onClick={() => setActiveTab('signup')} className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'signup' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Sign Up</button>
+            ) : (
+              <div className="bg-[#111] p-10 rounded-2xl border border-white/10 shadow-2xl">
+                <div className="flex justify-center gap-8 mb-8 border-b border-white/5 pb-4">
+                  <button onClick={() => setActiveTab('login')} className={`text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${activeTab === 'login' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Log In</button>
+                  <button onClick={() => setActiveTab('signup')} className={`text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${activeTab === 'signup' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Sign Up</button>
+                </div>
+                <div className="min-h-[300px] flex flex-col justify-center">
+                  {activeTab === 'login' && <LoginForm onForgotClick={() => setActiveTab('forgot')} />}
+                  {activeTab === 'signup' && <SignupForm />}
+                </div>
+                <button onClick={() => { setShowAuth(false); setActiveTab('login'); }} className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest cursor-pointer">Back to Home</button>
               </div>
-              <div className="min-h-[300px] flex flex-col justify-center">
-                {activeTab === 'login' && <LoginForm onForgotClick={() => setActiveTab('forgot')} />}
-                {activeTab === 'signup' && <SignupForm />}
-              </div>
-              <button onClick={() => { setShowAuth(false); setActiveTab('login'); }} className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest">Back to Home</button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>

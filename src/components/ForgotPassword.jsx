@@ -11,20 +11,17 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkRecovery = () => {
+    const handleUrlTokens = () => {
       const hash = window.location.hash;
-      const urlParams = new URLSearchParams(window.location.search);
-      const isRecovery = hash.includes('type=recovery') || 
-                         hash.includes('access_token=') || 
-                         urlParams.get('type') === 'recovery';
-
-      if (isRecovery) {
+      // Check kung recovery type o may access token sa URL
+      if (hash.includes('access_token=') || hash.includes('type=recovery')) {
         setStep('update');
         if (onForceOpen) onForceOpen();
       }
     };
 
-    checkRecovery();
+    handleUrlTokens();
+    window.addEventListener('hashchange', handleUrlTokens);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -33,7 +30,10 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('hashchange', handleUrlTokens);
+    };
   }, [onForceOpen]);
 
   if (!isOpen) return null;
@@ -43,11 +43,11 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin, 
+        redirectTo: `${window.location.origin}/#type=recovery`,
       });
       if (error) throw error;
       alert("Reset link sent to your email!");
-      onClose(); 
+      onClose();
     } catch (error) {
       alert(error.message);
     } finally {
@@ -61,19 +61,40 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
       alert("Passwords do not match!");
       return;
     }
-    if (newPassword.length < 6) {
-      alert("Password must be at least 6 characters.");
-      return;
-    }
-
+    
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
+      // REGEX EXTRACTION: Eto ang solusyon sa "No access token found"
+      const fullHash = window.location.hash;
+      const accessTokenMatch = fullHash.match(/access_token=([^&]*)/);
+      const refreshTokenMatch = fullHash.match(/refresh_token=([^&]*)/);
       
-      alert("Password updated successfully!");
-      await supabase.auth.signOut();
+      const accessToken = accessTokenMatch ? accessTokenMatch[1] : null;
+      const refreshToken = refreshTokenMatch ? refreshTokenMatch[1] : '';
 
+      if (!accessToken) {
+        throw new Error("Token not found in URL. Please use the link from your email again.");
+      }
+
+      // 1. I-pilit ang session gamit ang token mula sa Regex
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (sessionError) throw sessionError;
+
+      // 2. Kapag may session na, i-update ang password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (updateError) throw updateError;
+
+      alert("Success! Password has been changed.");
+      
+      // Linisin ang state at URL
+      await supabase.auth.signOut();
       window.history.replaceState(null, null, window.location.pathname);
       setStep('request');
       setNewPassword('');
@@ -81,72 +102,85 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
       
       onClose();
       navigate('/', { replace: true });
-      window.location.reload();
       
+      // Konting delay bago i-reload para sigurado
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+
     } catch (error) {
-      alert(error.message);
+      alert(`Update Failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto relative z-50">
       <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 text-black">
         <div className="text-center space-y-2 mb-8">
           <h3 className="text-2xl font-black uppercase tracking-tighter">
             {step === 'request' ? 'Recover Account' : 'New Password'}
           </h3>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
-            {step === 'request' ? 'Enter email to reset password' : 'Enter your new secure password below'}
+            {step === 'request' ? 'Enter email' : 'Enter your new secure password'}
           </p>
         </div>
-        
-        <form className="space-y-6" onSubmit={step === 'request' ? handleRecover : handleUpdatePassword}>
-          <div className="space-y-2">
-            <label className="text-[11px] font-black uppercase tracking-widest block ml-1">
-              {step === 'request' ? 'Email Address' : 'New Password'}
-            </label>
-            <input 
-              type={step === 'request' ? "email" : "password"}
-              required
-              value={step === 'request' ? email : newPassword}
-              onChange={(e) => step === 'request' ? setEmail(e.target.value) : setNewPassword(e.target.value)}
-              className="w-full bg-[#f9f9f9] border border-gray-200 p-4 rounded-2xl text-[12px] outline-none focus:border-yellow-500/50 transition-all" 
-              placeholder={step === 'request' ? "user@example.com" : "••••••••"}
-            />
-          </div>
 
-          {step === 'update' && (
+        <form className="space-y-6" onSubmit={step === 'request' ? handleRecover : handleUpdatePassword}>
+          {step === 'request' ? (
             <div className="space-y-2">
-              <label className="text-[11px] font-black uppercase tracking-widest block ml-1">
-                Confirm Password
-              </label>
-              <input 
-                type="password"
+              <label className="text-[11px] font-black uppercase tracking-widest block ml-1">Email Address</label>
+              <input
+                type="email"
                 required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-[#f9f9f9] border border-gray-200 p-4 rounded-2xl text-[12px] outline-none focus:border-yellow-500/50 transition-all" 
-                placeholder="••••••••"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-[#f9f9f9] border border-gray-200 p-4 rounded-2xl text-[12px] outline-none focus:border-[#d4af37]/50 transition-all"
+                placeholder="user@example.com"
               />
             </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-widest block ml-1">New Password</label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-[#f9f9f9] border border-gray-200 p-4 rounded-2xl text-[12px] outline-none focus:border-[#d4af37]/50 transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-widest block ml-1">Confirm Password</label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-[#f9f9f9] border border-gray-200 p-4 rounded-2xl text-[12px] outline-none focus:border-[#d4af37]/50 transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
+            </>
           )}
-          
+
           <div className="pt-2 flex flex-col gap-4">
-            <button 
-              type="submit" 
-              disabled={loading} 
-              className="w-full bg-[#d4af37] text-white py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.1em] hover:bg-[#c4a030] transition-all disabled:opacity-50"
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#d4af37] text-white py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.1em] hover:opacity-90 transition-all disabled:opacity-50"
             >
               {loading ? "Processing..." : (step === 'request' ? "Send Link" : "Update Password")}
             </button>
-            <button 
+            <button
               onClick={() => {
                 if (step === 'update') window.history.replaceState(null, null, window.location.pathname);
                 onClose();
-              }} 
-              type="button" 
+              }}
+              type="button"
               className="text-[10px] font-black uppercase text-gray-400 hover:text-black transition-all text-center tracking-[0.2em]"
             >
               Cancel
