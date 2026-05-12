@@ -12,10 +12,18 @@ const AdminDashboard = () => {
 
   // SECURITY CHECK: Mas pinalakas na logic
   useEffect(() => {
-    let isMounted = true; // Para maiwasan ang memory leaks
+    let isMounted = true; 
 
     const checkAdmin = async () => {
       try {
+        // --- ADDED RECOVERY CHECK ---
+        // Kung ang URL ay may recovery hash, ibalik sa Home para lumabas ang Reset Modal
+        if (window.location.hash.includes("type=recovery") || window.location.hash.includes("access_token=")) {
+          console.log("Recovery detected, redirecting to Home...");
+          if (isMounted) navigate("/", { replace: true });
+          return;
+        }
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError || !session) {
@@ -39,7 +47,7 @@ const AdminDashboard = () => {
         console.error("Admin check error:", error);
         if (isMounted) navigate("/", { replace: true });
       } finally {
-        if (isMounted) setLoading(false); // Dito natin papatayin ang loading maski anong mangyari
+        if (isMounted) setLoading(false); 
       }
     };
 
@@ -70,7 +78,7 @@ const AdminDashboard = () => {
     try {
       await supabase.auth.signOut();
       localStorage.clear();
-      navigate("/", { replace: true }); // Mas safe kesa window.location
+      navigate("/", { replace: true }); 
     } catch (error) {
       navigate("/", { replace: true });
     }
@@ -86,7 +94,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex font-sans text-slate-800">
-      {/* SIDEBAR - Keep your existing JSX here... */}
       <aside className="w-64 bg-black p-6 flex flex-col shadow-xl">
         <div className="mb-10 px-2">
             <h2 className="text-white font-black tracking-tighter text-xl italic">FAUSTINO'S</h2>
@@ -118,7 +125,6 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      {/* MAIN CONTENT - Keep your existing JSX here... */}
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-center mb-10 bg-black text-white p-4 rounded-xl shadow-lg">
           <h2 className="text-xs font-bold tracking-[0.3em] uppercase ml-4">EMS Dashboard</h2>
@@ -149,10 +155,8 @@ const AdminDashboard = () => {
             </div>
           ))}
         </div>
-        {/* ... (rest of your layout) */}
       </main>
 
-      {/* SETTINGS MODAL - Keep your existing JSX here... */}
       {isSettingsOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-[100]">
           <div className="bg-white w-full max-w-xs p-8 rounded-[2.5rem] shadow-2xl">

@@ -48,11 +48,17 @@ const ClientDashboard = ({ isGuest }) => {
 
     const verifyUser = async () => {
       try {
+        // --- ADDED RECOVERY CHECK ---
+        // Kung recovery mode, balik sa Home para lumabas ang Reset Password modal
+        if (window.location.hash.includes("type=recovery") || window.location.hash.includes("access_token=")) {
+          if (isMounted) navigate("/", { replace: true });
+          return;
+        }
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) throw sessionError;
 
-        // GUEST MODE LOGIC: Kung guest, wag i-redirect, ipakita lang ang dashboard
         if (!session) {
           if (isMounted) {
             setUser(null);
@@ -61,7 +67,6 @@ const ClientDashboard = ({ isGuest }) => {
           return;
         }
 
-        // ROLE CHECK: Siguraduhin na hindi Admin ang napadpad dito
         const { data: adminData } = await supabase
           .from('Admins')
           .select('admin_id')
@@ -84,12 +89,10 @@ const ClientDashboard = ({ isGuest }) => {
 
     verifyUser();
 
-    // AUTH LISTENER
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         if (isMounted) {
           setUser(null);
-          // Wag i-navigate sa "/" para manatili sa Guest View ng packages
           setLoading(false);
         }
       } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
@@ -107,7 +110,6 @@ const ClientDashboard = ({ isGuest }) => {
     try {
       await supabase.auth.signOut();
       localStorage.clear();
-      // Navigate to Home after logout
       navigate("/", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
@@ -116,7 +118,6 @@ const ClientDashboard = ({ isGuest }) => {
   };
 
   const handleBooking = (packageName) => {
-    // Check if truly a guest (no user and no session)
     if (!user) {
       alert("Please login first to book a package.");
       navigate("/"); 
@@ -125,7 +126,6 @@ const ClientDashboard = ({ isGuest }) => {
     }
   };
 
-  // --- LOADING SCREEN ---
   if (loading) return (
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
@@ -137,7 +137,6 @@ const ClientDashboard = ({ isGuest }) => {
 
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#B8860B] selection:text-white">
-      {/* --- NAVBAR --- */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-6 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div 
@@ -171,12 +170,11 @@ const ClientDashboard = ({ isGuest }) => {
         </div>
       </nav>
 
-      {/* --- MAIN CONTENT --- */}
       <main className="max-w-7xl mx-auto p-8 md:p-16">
         <header className="mb-20 flex flex-col md:flex-row justify-between items-end gap-10">
             <div>
                <h1 className="text-6xl md:text-8xl font-black text-black uppercase tracking-tighter leading-[0.85]">
-                 OUR <br/><span className="text-[#B8860B]">PACKAGES</span>
+                  OUR <br/><span className="text-[#B8860B]">PACKAGES</span>
                </h1>
                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.4em] mt-8 flex items-center gap-3">
                  <span className="w-8 h-[1px] bg-slate-200"></span> Exclusivity in Every Detail
@@ -231,7 +229,6 @@ const ClientDashboard = ({ isGuest }) => {
         </div>
       </main>
 
-      {/* --- MODAL SECTION --- */}
       {isModalOpen && selectedPackage && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setIsModalOpen(false)}></div>

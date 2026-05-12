@@ -11,8 +11,12 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   const isRecoveryMode = useMemo(() => {
-    const url = window.location.href;
-    return url.includes('type=recovery') || url.includes('access_token=') || window.location.hash.includes('access_token');
+    const hash = window.location.hash;
+    const search = window.location.search;
+    return hash.includes('type=recovery') || 
+           hash.includes('access_token=') || 
+           search.includes('type=recovery') ||
+           hash.includes('error_description=Email+link+is+invalid');
   }, []);
 
   const fetchUserRole = useCallback(async (userId) => {
@@ -27,7 +31,6 @@ function App() {
       if (error) throw error;
       setRole(adminData ? 'admin' : 'client');
     } catch (err) {
-      console.error("Error fetching role:", err.message);
       setRole('client'); 
     }
   }, []);
@@ -35,25 +38,25 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
-    // 1. Emergency timer para hindi ma-stuck sa loading screen
-    const emergencyTimer = setTimeout(() => {
-      if (mounted && loading) setLoading(false);
-    }, 1500);
-
     const initializeAuth = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (!mounted) return;
 
-        if (initialSession) {
+        if (isRecoveryMode) {
+          setSession(null); 
+          setRole(null);
+        } else if (initialSession) {
           setSession(initialSession);
           fetchUserRole(initialSession.user.id);
         }
       } catch (error) {
-        console.error("Auth error:", error);
+        console.error(error);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setTimeout(() => setLoading(false), 600);
+        }
       }
     };
 
@@ -62,33 +65,35 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!mounted) return;
       
-      setSession(currentSession);
+      if (event === 'PASSWORD_RECOVERY') {
+        setSession(null);
+        setRole(null);
+        return;
+      }
 
-      if (event === 'SIGNED_IN' && currentSession) {
-        if (!isRecoveryMode) fetchUserRole(currentSession.user.id);
-        setLoading(false); 
+      if (event === 'SIGNED_IN' && currentSession && !isRecoveryMode) {
+        setSession(currentSession);
+        fetchUserRole(currentSession.user.id);
       } 
       
       if (event === 'SIGNED_OUT') {
         setRole(null);
         setSession(null);
-        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(emergencyTimer);
     };
   }, [fetchUserRole, isRecoveryMode]); 
 
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-black text-[#D4AF37] font-bold tracking-widest uppercase">
-        <div className="animate-pulse italic">FAUSTINO'S...</div>
+        <div className="animate-pulse italic text-center">
+          FAUSTINO'S EVENT PLACE
+        </div>
       </div>
     );
   }
@@ -98,16 +103,14 @@ function App() {
       <Routes>
         <Route path="/" element={<Home isRecovering={isRecoveryMode} />} />
         
-        {/* CLIENT DASHBOARD: Pwedeng pasukin kahit walang session (Guest Mode) */}
         <Route 
           path="/ClientDashboard" 
-          element={<ClientDashboard isGuest={!session} />} 
+          element={isRecoveryMode ? <Navigate to="/" replace /> : <ClientDashboard isGuest={!session} />} 
         />
         
-        {/* ADMIN DASHBOARD: Strict access para sa Admin lang */}
         <Route 
           path="/AdminDashboard" 
-          element={session && (role === 'admin' || role === null) ? <AdminDashboard /> : <Navigate to="/" replace />} 
+          element={!isRecoveryMode && session && role === 'admin' ? <AdminDashboard /> : <Navigate to="/" replace />} 
         />
 
         <Route path="*" element={<Navigate to="/" replace />} />
