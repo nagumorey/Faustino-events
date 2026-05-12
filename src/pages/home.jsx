@@ -13,12 +13,11 @@ function Home({ isRecovering }) {
   const navigate = useNavigate();
   
   const getHasToken = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    
-    return hashParams.has('access_token') || 
-           urlParams.has('access_token') || 
-           window.location.href.includes('type=recovery') ||
+    const hash = window.location.hash;
+    const params = new URLSearchParams(window.location.search);
+    return hash.includes('access_token') || 
+           hash.includes('type=recovery') || 
+           params.has('access_token') ||
            isRecovering;
   };
   
@@ -31,7 +30,7 @@ function Home({ isRecovering }) {
       setShowAuth(true);
       setActiveTab('forgot');
     }
-  }, []);
+  }, [isRecovering]);
 
   const handleNavAction = useCallback((type) => {
     if (getHasToken()) return;
