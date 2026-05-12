@@ -5,30 +5,31 @@ import { useNavigate } from 'react-router-dom';
 export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState(''); // Dagdag na state para sa double check
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState('request');
   const navigate = useNavigate();
 
+  const checkRecoveryToken = () => {
+    const hash = window.location.hash;
+    const params = new URLSearchParams(window.location.search);
+    
+    const hasToken = hash.includes('access_token') || 
+                     hash.includes('type=recovery') || 
+                     params.get('type') === 'recovery' ||
+                     params.has('access_token');
+
+    if (hasToken) {
+      setStep('update');
+      if (onForceOpen) onForceOpen();
+      return true;
+    }
+    return false;
+  };
+
   useEffect(() => {
-    const checkRecovery = () => {
-      const hash = window.location.hash;
-      const params = new URLSearchParams(window.location.search);
-      
-      const isRecovery = hash.includes('access_token') || 
-                         hash.includes('type=recovery') || 
-                         params.get('type') === 'recovery';
-
-      if (isRecovery) {
-        setStep('update');
-        if (onForceOpen) onForceOpen();
-      }
-    };
-
-    checkRecovery();
-  }, [onForceOpen]);
-
-  useEffect(() => {
+    checkRecoveryToken();
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setStep('update');
@@ -37,7 +38,7 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [onForceOpen]);
+  }, [onForceOpen, isOpen]);
 
   if (!isOpen) return null;
 
@@ -61,9 +62,8 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
 
-    // VALIDATION: Check kung magkatugma yung passwords
     if (newPassword !== confirmPassword) {
-      alert("Passwords do not match! Please check again.");
+      alert("Passwords do not match!");
       return;
     }
 
@@ -74,28 +74,19 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
 
     setLoading(true);
     try {
-      // 1. I-update ang password sa Supabase
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       
       alert("Password updated successfully!");
-
-      // 2. MAG-LOGOUT: Para malinis ang session bago mag-login ulit
       await supabase.auth.signOut();
 
-      // 3. LINISIN ANG URL: Tanggalin ang tokens sa address bar
       window.history.replaceState(null, null, window.location.pathname);
-
-      // 4. I-RESET ANG STATES
       setStep('request');
       setNewPassword('');
       setConfirmPassword('');
       
-      // 5. I-CLOSE ANG MODAL AT I-REDIRECT
       onClose();
       navigate('/', { replace: true });
-
-      // 6. REFRESH: Fresh start para sa auth state
       window.location.reload();
       
     } catch (error) {
@@ -118,7 +109,6 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
         </div>
         
         <form className="space-y-6" onSubmit={step === 'request' ? handleRecover : handleUpdatePassword}>
-          {/* Main Input Field (Email or New Password) */}
           <div className="space-y-2">
             <label className="text-[11px] font-black uppercase tracking-widest block ml-1">
               {step === 'request' ? 'Email Address' : 'New Password'}
@@ -133,7 +123,6 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
             />
           </div>
 
-          {/* Confirm Password Field (Lalabas lang 'to kapag nasa 'update' step) */}
           {step === 'update' && (
             <div className="space-y-2">
               <label className="text-[11px] font-black uppercase tracking-widest block ml-1">
