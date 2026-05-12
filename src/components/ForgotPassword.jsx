@@ -10,27 +10,15 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   const [step, setStep] = useState('request');
   const navigate = useNavigate();
 
-  const checkRecoveryToken = () => {
-    const hash = window.location.hash;
-    const params = new URLSearchParams(window.location.search);
-    
-    const hasToken = hash.includes('access_token') || 
-                     hash.includes('type=recovery') || 
-                     params.get('type') === 'recovery' ||
-                     params.has('access_token');
-
-    if (hasToken) {
+  useEffect(() => {
+    // 1. Check agad pagka-load kung may recovery sa URL
+    if (window.location.hash.includes('type=recovery') || window.location.href.includes('access_token')) {
       setStep('update');
       if (onForceOpen) onForceOpen();
-      return true;
     }
-    return false;
-  };
 
-  useEffect(() => {
-    checkRecoveryToken();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    // 2. Makinig sa Supabase Auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setStep('update');
         if (onForceOpen) onForceOpen();
@@ -38,7 +26,7 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [onForceOpen, isOpen]);
+  }, [onForceOpen]);
 
   if (!isOpen) return null;
 
@@ -47,7 +35,8 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://faustino-events-gqgy.vercel.app/', 
+        // Pilitin natin ang URL format na may query param
+        redirectTo: 'https://faustino-events-gqgy.vercel.app/?type=recovery', 
       });
       if (error) throw error;
       alert("Reset link sent!");
@@ -61,12 +50,10 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
-
     if (newPassword !== confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
-
     if (newPassword.length < 6) {
       alert("Password must be at least 6 characters.");
       return;
