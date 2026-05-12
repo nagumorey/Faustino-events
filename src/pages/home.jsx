@@ -193,34 +193,32 @@ function Home({ isRecovering }) {
           <div className="absolute inset-0" onClick={() => { 
             if(!getHasToken()) setShowAuth(false); 
           }} />
-          <div className="relative w-full max-w-md bg-[#111] p-10 rounded-2xl border border-white/10 shadow-2xl">
-            {activeTab !== 'forgot' && (
+          
+          {activeTab === 'forgot' ? (
+             <ForgotPassword 
+                isOpen={true} 
+                isRecoveryMode={getHasToken()} 
+                onClose={() => { 
+                  if (!getHasToken()) {
+                     setShowAuth(false); 
+                     setActiveTab('login'); 
+                     window.history.replaceState(null, null, window.location.pathname);
+                  }
+                }} 
+              />
+          ) : (
+            <div className="relative w-full max-w-md bg-[#111] p-10 rounded-2xl border border-white/10 shadow-2xl">
               <div className="flex justify-center gap-8 mb-8 border-b border-white/5 pb-4">
                 <button onClick={() => setActiveTab('login')} className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'login' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Log In</button>
                 <button onClick={() => setActiveTab('signup')} className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'signup' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Sign Up</button>
               </div>
-            )}
-            <div className="min-h-[300px] flex flex-col justify-center">
-              {activeTab === 'login' && <LoginForm onForgotClick={() => setActiveTab('forgot')} />}
-              {activeTab === 'signup' && <SignupForm />}
-              {activeTab === 'forgot' && (
-                <ForgotPassword 
-                  isOpen={true} 
-                  isRecoveryMode={getHasToken()} 
-                  onClose={() => { 
-                    if (!getHasToken()) {
-                       setShowAuth(false); 
-                       setActiveTab('login'); 
-                       window.history.replaceState(null, null, window.location.pathname);
-                    }
-                  }} 
-                />
-              )}
+              <div className="min-h-[300px] flex flex-col justify-center">
+                {activeTab === 'login' && <LoginForm onForgotClick={() => setActiveTab('forgot')} />}
+                {activeTab === 'signup' && <SignupForm />}
+              </div>
+              <button onClick={() => { setShowAuth(false); setActiveTab('login'); }} className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest">Back to Home</button>
             </div>
-            {!getHasToken() && (
-               <button onClick={() => { setShowAuth(false); setActiveTab('login'); }} className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest">Back to Home</button>
-            )}
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -11,20 +11,23 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleUrlHash = () => {
+    const checkRecovery = () => {
       const hash = window.location.hash;
       const urlParams = new URLSearchParams(window.location.search);
-      
-      if (hash.includes('type=recovery') || hash.includes('access_token') || urlParams.get('type') === 'recovery') {
+      const isRecovery = hash.includes('type=recovery') || 
+                         hash.includes('access_token=') || 
+                         urlParams.get('type') === 'recovery';
+
+      if (isRecovery) {
         setStep('update');
         if (onForceOpen) onForceOpen();
       }
     };
 
-    handleUrlHash();
+    checkRecovery();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && window.location.hash.includes('access_token'))) {
+      if (event === 'PASSWORD_RECOVERY') {
         setStep('update');
         if (onForceOpen) onForceOpen();
       }
@@ -40,10 +43,10 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://faustino-events-gqgy.vercel.app/', 
+        redirectTo: window.location.origin, 
       });
       if (error) throw error;
-      alert("Reset link sent!");
+      alert("Reset link sent to your email!");
       onClose(); 
     } catch (error) {
       alert(error.message);
@@ -88,7 +91,7 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full max-w-md mx-auto">
       <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 text-black">
         <div className="text-center space-y-2 mb-8">
           <h3 className="text-2xl font-black uppercase tracking-tighter">

@@ -44,12 +44,11 @@ function App() {
         
         if (!mounted) return;
 
-        if (isRecoveryMode) {
-          setSession(null); 
-          setRole(null);
-        } else if (initialSession) {
+        if (initialSession) {
           setSession(initialSession);
-          fetchUserRole(initialSession.user.id);
+          if (!isRecoveryMode) {
+            fetchUserRole(initialSession.user.id);
+          }
         }
       } catch (error) {
         console.error(error);
@@ -66,14 +65,15 @@ function App() {
       if (!mounted) return;
       
       if (event === 'PASSWORD_RECOVERY') {
-        setSession(null);
-        setRole(null);
+        setSession(currentSession);
         return;
       }
 
-      if (event === 'SIGNED_IN' && currentSession && !isRecoveryMode) {
+      if (event === 'SIGNED_IN' && currentSession) {
         setSession(currentSession);
-        fetchUserRole(currentSession.user.id);
+        if (!isRecoveryMode) {
+          fetchUserRole(currentSession.user.id);
+        }
       } 
       
       if (event === 'SIGNED_OUT') {
