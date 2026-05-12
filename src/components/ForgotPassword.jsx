@@ -13,8 +13,9 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   useEffect(() => {
     const handleUrlTokens = () => {
       const hash = window.location.hash;
-      // Check kung recovery type o may access token sa URL
-      if (hash.includes('access_token=') || hash.includes('type=recovery')) {
+      const fullUrl = window.location.href;
+      
+      if (hash.includes('access_token=') || hash.includes('type=recovery') || fullUrl.includes('type=recovery')) {
         setStep('update');
         if (onForceOpen) onForceOpen();
       }
@@ -24,7 +25,7 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     window.addEventListener('hashchange', handleUrlTokens);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         setStep('update');
         if (onForceOpen) onForceOpen();
       }
@@ -43,7 +44,7 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/#type=recovery`,
+        redirectTo: "https://faustino-events-gqgy.vercel.app/#type=recovery",
       });
       if (error) throw error;
       alert("Reset link sent to your email!");
@@ -64,27 +65,26 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     
     setLoading(true);
     try {
-      // REGEX EXTRACTION: Eto ang solusyon sa "No access token found"
-      const fullHash = window.location.hash;
-      const accessTokenMatch = fullHash.match(/access_token=([^&]*)/);
-      const refreshTokenMatch = fullHash.match(/refresh_token=([^&]*)/);
+      const hash = window.location.hash || window.location.search;
+      const accessTokenMatch = hash.match(/access_token=([^&]*)/);
+      const refreshTokenMatch = hash.match(/refresh_token=([^&]*)/);
       
       const accessToken = accessTokenMatch ? accessTokenMatch[1] : null;
       const refreshToken = refreshTokenMatch ? refreshTokenMatch[1] : '';
 
       if (!accessToken) {
-        throw new Error("Token not found in URL. Please use the link from your email again.");
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session) {
+          throw new Error("Token not found. Please use the link from your email again.");
+        }
+      } else {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (sessionError) throw sessionError;
       }
 
-      // 1. I-pilit ang session gamit ang token mula sa Regex
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-
-      if (sessionError) throw sessionError;
-
-      // 2. Kapag may session na, i-update ang password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
@@ -93,7 +93,6 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
 
       alert("Success! Password has been changed.");
       
-      // Linisin ang state at URL
       await supabase.auth.signOut();
       window.history.replaceState(null, null, window.location.pathname);
       setStep('request');
@@ -103,7 +102,6 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
       onClose();
       navigate('/', { replace: true });
       
-      // Konting delay bago i-reload para sigurado
       setTimeout(() => {
         window.location.reload();
       }, 500);
