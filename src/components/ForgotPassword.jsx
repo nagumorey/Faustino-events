@@ -11,15 +11,14 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 1. Check agad pagka-load kung may recovery sa URL
-    if (window.location.hash.includes('type=recovery') || window.location.href.includes('access_token')) {
+    const fullUrl = window.location.href;
+    if (fullUrl.includes('access_token') || fullUrl.includes('recovery') || window.location.hash.includes('type=recovery')) {
       setStep('update');
       if (onForceOpen) onForceOpen();
     }
 
-    // 2. Makinig sa Supabase Auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         setStep('update');
         if (onForceOpen) onForceOpen();
       }
@@ -35,8 +34,7 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        // Pilitin natin ang URL format na may query param
-        redirectTo: 'https://faustino-events-gqgy.vercel.app/?type=recovery', 
+        redirectTo: 'https://faustino-events-gqgy.vercel.app/', 
       });
       if (error) throw error;
       alert("Reset link sent!");
