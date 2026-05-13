@@ -73,7 +73,7 @@ const LoginForm = ({ onForgotClick }) => {
           />
         </div>
 
-        {/* Login Button */}
+        {/* LOGING BUTTON */}
         <button 
           type="submit"
           disabled={loading}
