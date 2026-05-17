@@ -21,7 +21,7 @@ const LoginForm = ({ onForgotClick }) => {
 
       if (error) throw error;
 
-      // DAGDAG NATIN ITO TOL: Manual navigation para hindi na maghintay sa App.jsx
+      
       if (data?.session) {
         navigate('/ClientDashboard', { replace: true });
       }
@@ -34,7 +34,7 @@ const LoginForm = ({ onForgotClick }) => {
   };
 
   return (
-    /* GINAYA KO YUNG STYLE NUNG PUTI SA GITNA */
+    
     <div className="bg-white p-10 rounded-[3rem] w-full max-w-[380px] mx-auto shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
       <form onSubmit={handleLogin} className="space-y-6">
         

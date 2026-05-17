@@ -4,6 +4,11 @@ import { supabase } from './supabaseClient';
 import Home from './pages/home'; 
 import ClientDashboard from './pages/Dashboard'; 
 import AdminDashboard from './pages/AdminDashboard'; 
+import BookNow from './pages/booking';
+import AdminEvents from './components/AdminEvents';
+import AdminBookings from './components/Adminbookings';
+import AdminUsers from './components/AdminUsers';
+import AdminProfile from './components/AdminsProfile';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -47,7 +52,7 @@ function App() {
         if (initialSession) {
           setSession(initialSession);
           if (!isRecoveryMode) {
-            fetchUserRole(initialSession.user.id);
+            await fetchUserRole(initialSession.user.id);
           }
         }
       } catch (error) {
@@ -111,6 +116,31 @@ function App() {
         <Route 
           path="/AdminDashboard" 
           element={!isRecoveryMode && session && role === 'admin' ? <AdminDashboard /> : <Navigate to="/" replace />} 
+        />
+
+        <Route 
+          path="/AdminEvents" 
+          element={!isRecoveryMode && session && role === 'admin' ? <AdminEvents /> : <Navigate to="/" replace />} 
+        />
+
+        <Route 
+          path="/AdminBookings" 
+          element={!isRecoveryMode && session && role === 'admin' ? <AdminBookings /> : <Navigate to="/" replace />} 
+        />
+
+        <Route 
+          path="/AdminUsers" 
+          element={!isRecoveryMode && session && role === 'admin' ? <AdminUsers /> : <Navigate to="/" replace />} 
+        />
+
+        <Route 
+          path="/AdminProfile" 
+          element={!isRecoveryMode && session && role === 'admin' ? <AdminProfile /> : <Navigate to="/" replace />} 
+        />
+
+        <Route 
+          path="/booking" 
+          element={session ? <BookNow /> : <Navigate to="/" replace />} 
         />
 
         <Route path="*" element={<Navigate to="/" replace />} />

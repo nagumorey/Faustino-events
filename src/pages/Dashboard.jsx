@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
-import { LogOut, ArrowRight, Search, X } from "lucide-react";
+import { LogOut, ArrowRight, Search, X, Calendar, Clock, CreditCard } from "lucide-react";
 
-const ClientDashboard = ({ isGuest }) => {
+const ClientDashboard = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const navigate = useNavigate();
-
+  const [myBookings, setMyBookings] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
+  const navigate = useNavigate();
 
   const eventPackages = [
     { 
@@ -18,46 +18,38 @@ const ClientDashboard = ({ isGuest }) => {
       title: "Baptismal Package", 
       price: "₱1,500.00", 
       priceContext: "per person",
-      details: "Four (4) Hours Use of Venue Elegant Design & Dining Set-Up with Overlays...",
-      fullDetails: ["4 Hours Exclusive Use of Venue", "Elegant Thematic Set-up", "Basic Sound System", "Full Air-conditioning", "Complimentary Parking for Guests"],
-      img: "/assets/baptismal.jpg" 
+      details: "Exclusive use of venue with elegant thematic design and full dining set-up.",
+      fullDetails: ["4 Hours Exclusive Use of Venue", "Elegant Thematic Set-up", "Basic Sound System", "Full Air-conditioning", "Complimentary Parking"],
     },
     { 
       id: 2, 
       title: "Wedding Package", 
       price: "₱1,500.00", 
       priceContext: "per person",
-      details: "Four (4) Hours Use of Venue Elegant Design & Dining Set-Up with Overlays...",
-      fullDetails: ["4 Hours Use of Venue with Elegant Set-up", "Red Carpet for Grand Entrance", "Couple's Table Decoration", "Professional Sound and Lights System", "Bridal Suite / Holding Area"],
-      img: "/assets/wedding.jpg" 
+      details: "Grand wedding celebration with premium styling and red carpet entrance.",
+      fullDetails: ["4 Hours Use of Venue", "Red Carpet Entrance", "Couple's Table Decoration", "Professional Sound & Lights", "Bridal Suite Access"],
     },
     { 
       id: 3, 
       title: "Venue Rental", 
       price: "₱450.00", 
       priceContext: "per person",
-      details: "Use Of Venue For (4) Four Hours Air Conditioning System",
-      fullDetails: ["4 Hours Maximum Venue Use", "Standard Lighting", "Air-conditioning System Included", "Clean Restrooms Access", "Security Guard on Duty"],
-      img: "/assets/venue_rental.jpg" 
+      details: "Flexible venue use for various events with full air-conditioning system.",
+      fullDetails: ["4 Hours Maximum Venue Use", "Standard Lighting", "Air-conditioning Included", "Clean Restrooms Access", "Security Service"],
     }
   ];
 
-  // --- SECURITY & SESSION CHECK ---
   useEffect(() => {
     let isMounted = true;
 
-    const verifyUser = async () => {
+    const verifyAndFetch = async () => {
       try {
-        // --- ADDED RECOVERY CHECK ---
-        // Kung recovery mode, balik sa Home para lumabas ang Reset Password modal
         if (window.location.hash.includes("type=recovery") || window.location.hash.includes("access_token=")) {
           if (isMounted) navigate("/", { replace: true });
           return;
         }
 
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) throw sessionError;
+        const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {
           if (isMounted) {
@@ -78,25 +70,32 @@ const ClientDashboard = ({ isGuest }) => {
             navigate("/AdminDashboard", { replace: true });
           } else {
             setUser(session.user);
+            const { data: bookingData } = await supabase
+              .from('bookings')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: false });
+            
+            setMyBookings(bookingData || []);
             setLoading(false);
           }
         }
       } catch (error) {
-        console.error("Dashboard Auth Error:", error);
         if (isMounted) setLoading(false);
       }
     };
 
-    verifyUser();
+    verifyAndFetch();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         if (isMounted) {
           setUser(null);
+          setMyBookings([]);
           setLoading(false);
         }
-      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        verifyUser();
+      } else {
+        verifyAndFetch();
       }
     });
 
@@ -107,172 +106,166 @@ const ClientDashboard = ({ isGuest }) => {
   }, [navigate]);
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      localStorage.clear();
-      navigate("/", { replace: true });
-    } catch (error) {
-      console.error("Logout error:", error);
-      navigate("/");
-    }
+    await supabase.auth.signOut();
+    localStorage.clear();
+    navigate("/", { replace: true });
   };
 
-  const handleBooking = (packageName) => {
+  const handleBooking = (pkg) => {
     if (!user) {
-      alert("Please login first to book a package.");
       navigate("/"); 
     } else {
-      navigate("/book-now", { state: { selectedType: packageName } });
+      navigate("/booking", { 
+        state: { 
+          selectedType: pkg.title,
+          price: pkg.price 
+        } 
+      });
     }
   };
 
   if (loading) return (
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 border-4 border-[#B8860B] border-t-transparent rounded-full animate-spin"></div>
-        <span className="text-[#B8860B] font-black uppercase tracking-[0.3em] text-[10px]">Syncing Faustino Events...</span>
+        <div className="w-12 h-12 border-4 border-[#B8860B] border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-[#B8860B] font-black uppercase tracking-[0.3em] text-[10px]">Updating Dashboard...</span>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white font-sans selection:bg-[#B8860B] selection:text-white">
-      <nav className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-6 sticky top-0 z-50">
+    <div className="min-h-screen bg-[#fafafa] font-sans selection:bg-[#B8860B] selection:text-white">
+      <nav className="bg-white/90 backdrop-blur-xl border-b border-slate-100 px-6 py-5 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div 
-            className="text-2xl font-black text-black tracking-tighter cursor-pointer flex items-center gap-2 group" 
-            onClick={() => navigate("/")}
-          >
-            <div className="w-1 h-6 bg-[#B8860B] group-hover:h-8 transition-all"></div> 
-            FAUSTINO <span className="text-[#B8860B] italic">EVENTS</span>
+          <div className="text-xl font-black tracking-tighter flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+            <div className="w-1.5 h-6 bg-[#B8860B]"></div>
+            FAUSTINO <span className="text-[#B8860B] italic text-lg">EVENTS</span>
           </div>
           
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
             {user ? (
-              <div className="flex items-center gap-6">
-                <span className="text-[10px] font-bold text-slate-400 hidden md:block">{user.email}</span>
-                <button 
-                  onClick={handleLogout} 
-                  className="text-[10px] font-black text-slate-400 hover:text-red-600 flex items-center gap-2 transition-all uppercase tracking-[0.2em]"
-                >
-                  LOGOUT <LogOut size={14} />
+              <div className="flex items-center gap-5">
+                <div className="hidden md:flex flex-col items-end">
+                  <span className="text-[10px] font-black text-black uppercase">{user.email.split('@')[0]}</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Client Member</span>
+                </div>
+                <button onClick={handleLogout} className="p-2.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all">
+                  <LogOut size={18} />
                 </button>
               </div>
             ) : (
-              <button 
-                onClick={() => navigate("/")} 
-                className="text-[10px] font-black bg-black text-white px-8 py-2.5 rounded-full hover:bg-[#B8860B] transition-all uppercase tracking-widest shadow-lg shadow-black/10"
-              >
-                LOGIN TO BOOK
+              <button onClick={() => navigate("/")} className="text-[10px] font-black bg-black text-white px-8 py-3 rounded-xl hover:bg-[#B8860B] transition-all uppercase tracking-widest shadow-xl shadow-black/10">
+                Sign In
               </button>
             )}
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto p-8 md:p-16">
-        <header className="mb-20 flex flex-col md:flex-row justify-between items-end gap-10">
+      <main className="max-w-7xl mx-auto px-6 py-12 md:py-20">
+        <section className="mb-24">
+          <div className="flex flex-col md:flex-row justify-between items-end gap-10 mb-16">
             <div>
-               <h1 className="text-6xl md:text-8xl font-black text-black uppercase tracking-tighter leading-[0.85]">
-                  OUR <br/><span className="text-[#B8860B]">PACKAGES</span>
-               </h1>
-               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.4em] mt-8 flex items-center gap-3">
-                 <span className="w-8 h-[1px] bg-slate-200"></span> Exclusivity in Every Detail
-               </p>
+              <h1 className="text-5xl md:text-7xl font-black text-black uppercase tracking-tighter leading-[0.9]">
+                Premium <br/><span className="text-[#B8860B]">Packages</span>
+              </h1>
+              <div className="h-1 w-20 bg-[#B8860B] mt-6"></div>
             </div>
 
-            <div className="relative w-full md:w-96 group">
-              <Search className="absolute left-5 top-4 text-slate-300 group-focus-within:text-[#B8860B] transition-colors" size={18} />
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
               <input 
                 type="text" 
-                placeholder="SEARCH FOR EVENTS..." 
+                placeholder="Find an event..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 text-[11px] font-bold tracking-widest text-black focus:ring-2 focus:ring-[#B8860B]/20 transition-all placeholder:text-slate-300"
+                className="w-full bg-white border border-slate-100 rounded-2xl py-4 pl-14 pr-6 text-[11px] font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-[#B8860B]/10 transition-all shadow-sm"
               />
             </div>
-        </header>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-          {eventPackages
-            .filter((pkg) => pkg.title.toLowerCase().includes(searchQuery.toLowerCase()))
-            .map((pkg) => (
-            <div key={pkg.id} className="bg-white rounded-[2.5rem] overflow-hidden hover:shadow-3xl transition-all border border-slate-100 group flex flex-col hover:-translate-y-2 duration-500">
-              <div className="h-72 bg-slate-100 relative overflow-hidden">
-                 <img 
-                    src={pkg.img} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
-                    alt={pkg.title} 
-                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=1000&auto=format&fit=crop'; }}
-                 />
-              </div>
-
-              <div className="p-10 flex flex-col flex-1">
-                <h3 className="text-2xl font-black text-black leading-tight uppercase tracking-tighter mb-4 group-hover:text-[#B8860B] transition-colors">{pkg.title}</h3>
-                <p className="text-slate-400 text-[11px] leading-relaxed font-bold uppercase tracking-wider flex-1 mb-10 line-clamp-2">{pkg.details}</p>
-                
-                <div className="pt-8 border-t border-slate-50 flex items-center justify-between">
-                    <div className="flex flex-col">
-                        <span className="text-[#B8860B] font-black text-2xl tracking-tighter">{pkg.price}</span>
-                        <span className="text-[9px] text-slate-300 uppercase font-black tracking-widest">{pkg.priceContext}</span>
-                    </div>
-                    <button 
-                      onClick={() => { setSelectedPackage(pkg); setIsModalOpen(true); }} 
-                      className="bg-black text-white hover:bg-[#B8860B] text-[10px] font-black uppercase tracking-widest px-8 py-4 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-black/5"
-                    >
-                      DETAILS <ArrowRight size={14} />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {eventPackages
+              .filter((pkg) => pkg.title.toLowerCase().includes(searchQuery.toLowerCase()))
+              .map((pkg) => (
+              <div key={pkg.id} className="bg-white rounded-[2rem] overflow-hidden border border-slate-100 group flex flex-col hover:shadow-2xl hover:shadow-[#B8860B]/5 transition-all duration-500">
+                <div className="h-64 bg-slate-200"></div>
+                <div className="p-10 flex flex-col flex-1">
+                  <h3 className="text-xl font-black text-black uppercase tracking-tight mb-3">{pkg.title}</h3>
+                  <p className="text-slate-400 text-[10px] leading-relaxed font-bold uppercase tracking-wider mb-8 flex-1">{pkg.details}</p>
+                  <div className="flex items-center justify-between pt-6 border-t border-slate-50">
+                    <span className="text-[#B8860B] font-black text-xl tracking-tighter">{pkg.price}</span>
+                    <button onClick={() => { setSelectedPackage(pkg); setIsModalOpen(true); }} className="p-3 bg-black text-white rounded-xl hover:bg-[#B8860B] transition-all">
+                      <ArrowRight size={18} />
                     </button>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </section>
+
+        {user && myBookings.length > 0 && (
+          <section className="mt-32">
+            <div className="mb-12">
+              <h2 className="text-3xl font-black text-black uppercase tracking-tighter">My Bookings</h2>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Track your current event status</p>
             </div>
-          ))}
-        </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {myBookings.map((item) => (
+                <div key={item.booking_id} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col md:flex-row gap-6 relative overflow-hidden">
+                  <div className={`absolute top-0 right-0 px-5 py-2 text-[8px] font-black uppercase tracking-widest ${item.booking_status === 'Approved' ? 'bg-green-500 text-white' : 'bg-orange-400 text-white'}`}>
+                    {item.booking_status || 'Pending'}
+                  </div>
+                  <div className="w-full md:w-32 h-32 bg-slate-100 rounded-2xl flex-shrink-0"></div>
+                  <div className="flex-1">
+                    <div className="mb-4">
+                      <p className="text-[9px] font-black text-[#B8860B] uppercase tracking-widest mb-1">Schedule</p>
+                      <h4 className="text-lg font-black uppercase tracking-tight">{item.event_date}</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <Clock size={14} />
+                        <span className="text-[10px] font-bold uppercase">{item.appointment_time}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <CreditCard size={14} />
+                        <span className="text-[10px] font-bold uppercase">{item.payment_status || 'Unpaid'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       {isModalOpen && selectedPackage && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setIsModalOpen(false)}></div>
-          
-          <div className="bg-white rounded-[3rem] w-full max-w-4xl relative z-10 overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in fade-in zoom-in duration-300">
-            <button 
-              onClick={() => setIsModalOpen(false)} 
-              className="absolute top-8 right-8 w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-[#B8860B] transition-colors z-20"
-            >
-              <X size={20} />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
+          <div className="bg-white rounded-[2.5rem] w-full max-w-4xl relative z-10 overflow-hidden flex flex-col md:flex-row animate-in zoom-in duration-300">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-[#B8860B] transition-colors z-20">
+              <X size={18} />
             </button>
-
-            <div className="w-full md:w-1/2 h-80 md:h-auto relative overflow-hidden">
-              <img src={selectedPackage.img} className="w-full h-full object-cover" alt={selectedPackage.title} />
-            </div>
-
-            <div className="p-12 md:w-1/2 flex flex-col bg-white">
-              <div className="mb-8">
-                <span className="text-[9px] font-black text-[#B8860B] tracking-[0.4em] uppercase inline-block mb-3 bg-yellow-50 px-3 py-1 rounded-full">Premium Selections</span>
-                <h2 className="text-4xl font-black text-black uppercase tracking-tighter leading-none">{selectedPackage.title}</h2>
-              </div>
-
-              <div className="flex-1 overflow-y-auto pr-4">
-                <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-6">Inclusions & Services</h4>
-                <ul className="space-y-4 mb-10">
-                  {selectedPackage.fullDetails.map((item, index) => (
-                    <li key={index} className="text-[11px] font-bold text-slate-600 flex items-start gap-4">
-                      <span className="w-5 h-5 bg-slate-50 text-[#B8860B] rounded-full flex items-center justify-center text-[8px] flex-shrink-0">{index + 1}</span>
-                      <span className="mt-0.5">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="flex items-center justify-between pt-10 border-t border-slate-100">
-                <div className="flex flex-col">
-                  <span className="text-3xl font-black text-black tracking-tighter">{selectedPackage.price}</span>
-                  <span className="text-[9px] text-[#B8860B] uppercase font-black tracking-widest">Starting Price</span>
+            <div className="w-full md:w-5/12 h-64 md:h-auto bg-slate-200"></div>
+            <div className="p-10 md:p-14 md:w-7/12">
+              <h2 className="text-3xl font-black text-black uppercase tracking-tighter mb-6">{selectedPackage.title}</h2>
+              <ul className="space-y-4 mb-10">
+                {selectedPackage.fullDetails.map((item, index) => (
+                  <li key={index} className="text-[10px] font-bold text-slate-500 flex items-center gap-3 uppercase tracking-wider">
+                    <div className="w-1.5 h-1.5 bg-[#B8860B] rounded-full"></div> {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex items-center justify-between pt-8 border-t border-slate-100">
+                <div>
+                  <span className="text-2xl font-black text-black tracking-tighter">{selectedPackage.price}</span>
+                  <p className="text-[8px] text-[#B8860B] uppercase font-black tracking-widest">Starts At</p>
                 </div>
-                <button 
-                  onClick={() => handleBooking(selectedPackage.title)}
-                  className="bg-black text-white px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-[#B8860B] transition-all shadow-2xl"
-                >
-                  RESERVE NOW
+                <button onClick={() => handleBooking(selectedPackage)} className="bg-black text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#B8860B] transition-all">
+                  Reserve Package
                 </button>
               </div>
             </div>

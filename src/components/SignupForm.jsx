@@ -56,16 +56,14 @@ const SignupForm = () => {
 
         if (dbError) throw dbError;
 
-        // --- ETO YUNG FIX TOL ---
-        // I-sign out agad ang user pagka-signup para hindi sila maging "logged in" 
-        // sa state ng app mo habang hindi pa confirmed ang email.
+        
         await supabase.auth.signOut();
 
-        alert("Registration Successful! Pakicheck ang email mo para sa confirmation link bago mag-login.");
+        alert("Registration Successful!.");
         
         clearForm();
         
-        // Ibalik sa Home page (bilang Guest)
+    
         navigate('/');
       }
     } catch (error) {
