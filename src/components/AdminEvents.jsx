@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 
 const AdminEvents = () => {
@@ -88,12 +89,21 @@ const AdminEvents = () => {
     <div className="p-8 bg-[#F8F9FA] min-h-screen font-sans relative">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-serif font-bold text-[#1e293b]">Event Packages</h1>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-black text-white px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-all"
-        >
-          Add New Package
-        </button>
+        
+        <div className="flex gap-3">
+          <Link 
+            to="/AdminDashboard" 
+            className="px-4 py-2 bg-slate-800 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-black transition-colors"
+          >
+            Back to Dashboard
+          </Link>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-black text-white px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-all"
+          >
+            Add New Package
+          </button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -122,7 +132,12 @@ const AdminEvents = () => {
                     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">Price per Pax</p>
                     <p className="text-lg font-black text-slate-900">₱{parseFloat(e.amount_per_pax || 0).toLocaleString()}</p>
                   </div>
-                  <button className="text-[10px] font-black uppercase text-blue-600 hover:underline">Manage</button>
+                  <Link 
+                    to={`/ManageEvent/${e.event_id}`} 
+                    className="text-[10px] font-black uppercase text-blue-600 hover:underline"
+                  >
+                    Manage
+                  </Link>
                 </div>
               </div>
             </div>

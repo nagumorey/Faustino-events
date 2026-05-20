@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
-
+import { useVoice } from './hooks/useVoice';
 export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');

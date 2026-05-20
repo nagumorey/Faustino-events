@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import LoginForm from "../components/LoginForm";
 import SignupForm from "../components/SignupForm";
 import ForgotPassword from "../components/ForgotPassword";
+import { useVoice } from '../components/hooks/useVoice';
 
 import EVL from "../assets/EVL.jpg";
 import LVE from "../assets/LVE.jpg";
@@ -11,14 +12,19 @@ import Debut from "../assets/Debut.jpg";
 
 function Home({ isRecovering }) { 
   const navigate = useNavigate();
+  const { speak } = useVoice();
+  
+  useEffect(() => {
+    speak("Maligayang pagdating sa Faustino's Event Place. Pindutin ang tab para sa nabigasyon.");
+  }, []);
   
   const getHasToken = () => {
     const hash = window.location.hash;
     const params = new URLSearchParams(window.location.search);
     return hash.includes('access_token') || 
-           hash.includes('type=recovery') || 
-           params.has('access_token') ||
-           isRecovering;
+            hash.includes('type=recovery') || 
+            params.has('access_token') ||
+            isRecovering;
   };
   
   const [showAuth, setShowAuth] = useState(getHasToken());
@@ -87,27 +93,29 @@ function Home({ isRecovering }) {
         <div 
           className="text-2xl font-black text-yellow-500 italic tracking-tighter cursor-pointer" 
           onClick={() => handleNavAction('home')}
+          onFocus={() => speak("Faustino's home")}
+          tabIndex="0"
         >
           Faustino's
         </div>
         
         <div className="hidden md:flex gap-10 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300">
-          <a href="#home" className="hover:text-yellow-500 transition-all">Home</a>
-          <a href="#about" className="hover:text-yellow-500 transition-all">About Us</a>
-          <a href="#celebrations" className="hover:text-yellow-500 transition-all uppercase">Event</a>
-          <button onClick={() => navigate('/ClientDashboard')} className="hover:text-yellow-500 transition-all uppercase text-[11px] font-bold tracking-[0.2em]">Packages</button>
+          <a href="#home" onFocus={() => speak("Home section")} className="hover:text-yellow-500 transition-all">Home</a>
+          <a href="#about" onFocus={() => speak("About us section")} className="hover:text-yellow-500 transition-all">About Us</a>
+          <a href="#celebrations" onFocus={() => speak("Events section")} className="hover:text-yellow-500 transition-all uppercase">Event</a>
+          <button onClick={() => navigate('/ClientDashboard')} onFocus={() => speak("Packages section")} className="hover:text-yellow-500 transition-all uppercase text-[11px] font-bold tracking-[0.2em]">Packages</button>
         </div>
 
         <div className="flex gap-3">
           {!session ? (
             <>
-              <button onClick={() => { setShowAuth(true); setActiveTab('signup'); }} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Sign Up</button>
-              <button onClick={() => { setShowAuth(true); setActiveTab('login'); }} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Log In</button>
+              <button onClick={() => { setShowAuth(true); setActiveTab('signup'); }} onFocus={() => speak("Sign up button")} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Sign Up</button>
+              <button onClick={() => { setShowAuth(true); setActiveTab('login'); }} onFocus={() => speak("Log in button")} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Log In</button>
             </>
           ) : (
             <div className="flex gap-3">
-              <button onClick={() => navigate(session.user.email.includes('admin') ? '/AdminDashboard' : '/ClientDashboard')} className="text-[10px] font-black uppercase tracking-widest bg-white text-black px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Dashboard</button>
-              <button onClick={handleLogout} className="text-[10px] font-black uppercase tracking-widest border border-white/20 text-white px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Logout</button>
+              <button onClick={() => navigate(session.user.email.includes('admin') ? '/AdminDashboard' : '/ClientDashboard')} onFocus={() => speak("Dashboard button")} className="text-[10px] font-black uppercase tracking-widest bg-white text-black px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Dashboard</button>
+              <button onClick={handleLogout} onFocus={() => speak("Logout button")} className="text-[10px] font-black uppercase tracking-widest border border-white/20 text-white px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Logout</button>
             </div>
           )}
         </div>
@@ -148,7 +156,7 @@ function Home({ isRecovering }) {
         </div>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 pb-32">
           {[EVL, LVE, Debut].map((img, index) => (
-            <div key={index} className="group relative overflow-hidden rounded-xl aspect-[4/5] cursor-pointer" onClick={() => navigate('/ClientDashboard')}>
+            <div key={index} className="group relative overflow-hidden rounded-xl aspect-[4/5] cursor-pointer" onClick={() => navigate('/ClientDashboard')} tabIndex="0" onFocus={() => speak("Event package " + (index + 1))}>
               <img src={img} className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105" alt="Celebration" />
               <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all duration-300" />
             </div>
@@ -162,7 +170,6 @@ function Home({ isRecovering }) {
             <h2 className="text-4xl md:text-5xl font-serif italic text-yellow-500">Find Us</h2>
             <p className="text-gray-500 text-[9px] font-bold uppercase tracking-[0.3em]">Visit our elegant venue</p>
           </div>
-          
           <div className="w-full h-[450px] rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 relative group">
             <iframe
               title="Faustino's Event Place Location"
@@ -210,14 +217,14 @@ function Home({ isRecovering }) {
             ) : (
               <div className="bg-[#111] p-10 rounded-2xl border border-white/10 shadow-2xl">
                 <div className="flex justify-center gap-8 mb-8 border-b border-white/5 pb-4">
-                  <button onClick={() => setActiveTab('login')} className={`text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${activeTab === 'login' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Log In</button>
-                  <button onClick={() => setActiveTab('signup')} className={`text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${activeTab === 'signup' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Sign Up</button>
+                  <button onClick={() => setActiveTab('login')} onFocus={() => speak("Log in tab")} className={`text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${activeTab === 'login' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Log In</button>
+                  <button onClick={() => setActiveTab('signup')} onFocus={() => speak("Sign up tab")} className={`text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${activeTab === 'signup' ? 'text-yellow-500 border-b border-yellow-500 pb-2' : 'text-gray-400'}`}>Sign Up</button>
                 </div>
                 <div className="min-h-[300px] flex flex-col justify-center">
                   {activeTab === 'login' && <LoginForm onForgotClick={() => setActiveTab('forgot')} />}
                   {activeTab === 'signup' && <SignupForm />}
                 </div>
-                <button onClick={() => { setShowAuth(false); setActiveTab('login'); }} className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest cursor-pointer">Back to Home</button>
+                <button onClick={() => { setShowAuth(false); setActiveTab('login'); }} onFocus={() => speak("Back to home button")} className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest cursor-pointer">Back to Home</button>
               </div>
             )}
           </div>

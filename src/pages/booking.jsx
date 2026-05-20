@@ -49,13 +49,12 @@ const BookNow = () => {
 
       const hasOverlap = existingBookings.some((booking) => {
         const existingStart = booking.appointment_time;
-        const existingEnd = booking.end_time || calculateDefaultEndTime(booking.appointment_time);
-
+        const existingEnd = booking.end_time;
         return formattedStartTime < existingEnd && formattedEndTime > existingStart;
       });
 
       if (hasOverlap) {
-        setAlertMessage("Slot Not Available: The selected time range overlaps with an existing reservation on this day. Please choose a different time.");
+        setAlertMessage("Slot Not Available: The selected time range overlaps with an existing reservation on this day.");
         setIsSubmitting(false);
         return;
       }
@@ -104,14 +103,6 @@ const BookNow = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const calculateDefaultEndTime = (startTimeStr) => {
-    if (!startTimeStr) return "";
-    const [hours, minutes] = startTimeStr.split(":").map(Number);
-    const endHour = (hours + 6).toString().padStart(2, "0");
-    const endMinute = minutes.toString().padStart(2, "0");
-    return `${endHour}:${endMinute}:00`;
   };
 
   return (

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { Check, X, Calendar, Clock, Users, Save } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Check, X, Calendar, Clock, Users, Save, FileImage } from 'lucide-react';
 
 const AdminBookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -11,8 +12,13 @@ const AdminBookings = () => {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*')
-        .order('appointment_date', { ascending: false });
+        .select(`
+          *,
+          transactions (
+            proof_of_payment
+          )
+        `)
+        .order('booking_id', { ascending: true });
 
       if (error) {
         console.error("Fetch Error:", error.message);
@@ -37,12 +43,30 @@ const AdminBookings = () => {
 
   const handleApproveBooking = async (bookingId) => {
     try {
+      const numericBookingId = parseInt(bookingId, 10);
       const { error } = await supabase
         .from('bookings')
-        .update({ booking_status: 'Approved' }) 
-        .eq('booking_id', bookingId);
+        .update({ booking_status: 'Approved' })
+        .eq('booking_id', numericBookingId);
 
       if (error) throw error;
+
+      const generatedTxId = `TX-${numericBookingId}-${Date.now()}`;
+      const { error: txError } = await supabase
+        .from('transactions')
+        .insert([
+          {
+            transaction_id: generatedTxId,
+            booking_id: numericBookingId,
+            transaction_date: new Date().toISOString(),
+            amount_paid: 0,
+            payment_method: 'Cash',
+            payment_status: 'Pending'
+          }
+        ]);
+
+      if (txError) throw txError;
+
       alert('Reservation Approved successfully!');
       fetchBookings();
     } catch (err) {
@@ -55,8 +79,8 @@ const AdminBookings = () => {
     try {
       const { error } = await supabase
         .from('bookings')
-        .update({ booking_status: 'Cancelled' }) 
-        .eq('booking_id', bookingId);
+        .update({ booking_status: 'Cancelled' })
+        .eq('booking_id', parseInt(bookingId, 10));
 
       if (error) throw error;
       alert('Reservation Cancelled.');
@@ -76,30 +100,59 @@ const AdminBookings = () => {
 
   const savePaymentUpdate = async (bookingId, totalAmount) => {
     try {
+      const numericBookingId = parseInt(bookingId, 10);
       const newPaidAmount = parseFloat(editingValues[bookingId]) || 0;
+      const parsedTotal = parseFloat(totalAmount) || 0;
       let newPaymentStatus = 'Unpaid';
 
-      if (newPaidAmount >= totalAmount) {
+      if (newPaidAmount >= parsedTotal) {
         newPaymentStatus = 'Paid';
-      } else if (newPaidAmount > 0 && newPaidAmount < totalAmount) {
+      } else if (newPaidAmount > 0 && newPaidAmount < parsedTotal) {
         newPaymentStatus = 'Downpayment';
       }
 
-      const { error } = await supabase
+      const { error: bookingErr } = await supabase
         .from('bookings')
         .update({
           paid_amount: newPaidAmount,
           payment_status: newPaymentStatus
         })
-        .eq('booking_id', bookingId);
+        .eq('booking_id', numericBookingId);
 
-      if (error) throw error;
-      alert('Payment details updated successfully!');
+      if (bookingErr) throw bookingErr;
+
+      const { data: txRecords, error: txFetchErr } = await supabase
+        .from('transactions')
+        .select('transaction_id')
+        .eq('booking_id', numericBookingId);
+
+      if (txFetchErr) throw txFetchErr;
+
+      if (txRecords && txRecords.length > 0) {
+        const targetTxId = txRecords[0].transaction_id;
+        const { error: txUpdateErr } = await supabase
+          .from('transactions')
+          .update({
+            amount_paid: newPaidAmount,
+            payment_status: newPaymentStatus
+          })
+          .eq('transaction_id', targetTxId);
+        if (txUpdateErr) throw txUpdateErr;
+      }
+
+      alert(`Success! Updated Payment details for Booking #${numericBookingId}`);
       fetchBookings();
     } catch (err) {
-      console.error("Payment Save Error:", err);
+      console.error("Payment Save Error Detail:", err);
       alert('Error saving payment: ' + err.message);
     }
+  };
+
+  const openReceipt = (path) => {
+    if (!path) return;
+    const cleanPath = path.includes('receipts/') ? path.split('receipts/').pop() : path;
+    const { data } = supabase.storage.from('receipts').getPublicUrl(cleanPath);
+    window.open(data.publicUrl, '_blank');
   };
 
   if (loading) return (
@@ -117,6 +170,12 @@ const AdminBookings = () => {
           <h1 className="text-3xl font-serif font-bold text-[#1e293b]">Reservations Manager</h1>
           <p className="text-slate-500 text-xs mt-1 uppercase tracking-wider font-semibold">Real-time Booking Updates</p>
         </div>
+        <Link 
+          to="/AdminDashboard" 
+          className="px-4 py-2 bg-slate-800 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-black transition-colors"
+        >
+          Back to Dashboard
+        </Link>
       </div>
       
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -143,7 +202,7 @@ const AdminBookings = () => {
                         <span className="text-slate-900 font-bold text-sm">{b.event_type || 'Wedding Package'}</span>
                         <div className="flex items-center gap-1.5 text-slate-500 mt-1">
                           <Users size={12} className="text-slate-400" />
-                          <span className="text-xs font-semibold">{b.total_pax !== null && b.total_pax !== undefined ? b.total_pax : 0} Pax</span>
+                          <span className="text-xs font-semibold">{b.total_pax ?? 0} Pax</span>
                         </div>
                         <span className="text-[9px] text-slate-400 font-mono mt-1 max-w-[120px] truncate">{b.user_id}</span>
                       </div>
@@ -158,7 +217,7 @@ const AdminBookings = () => {
                         <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
                           <Clock size={14} className="text-slate-400" />
                           <span>
-                            {b.appointment_time ? b.appointment_time.substring(0, 5) : '00:00'} 
+                            {b.appointment_time?.substring(0, 5) || '00:00'} 
                             {b.end_time ? ` - ${b.end_time.substring(0, 5)}` : ''}
                           </span>
                         </div>
@@ -172,14 +231,13 @@ const AdminBookings = () => {
                           <span className="text-xs font-bold text-slate-400">₱</span>
                           <input 
                             type="number"
-                            value={editingValues[b.booking_id] !== undefined ? editingValues[b.booking_id] : (b.paid_amount || 0)}
+                            value={editingValues[b.booking_id] ?? (b.paid_amount || 0)}
                             onChange={(e) => handlePaidAmountChange(b.booking_id, e.target.value)}
                             className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs font-bold outline-none focus:border-black"
                           />
                           <button
                             onClick={() => savePaymentUpdate(b.booking_id, b.amount)}
                             className="p-1.5 bg-black text-white hover:bg-slate-800 rounded-md transition-colors"
-                            title="Save Payment Amount"
                           >
                             <Save size={12} />
                           </button>
@@ -190,47 +248,48 @@ const AdminBookings = () => {
                     <td className="p-5">
                       <div className="flex flex-col gap-2">
                         <span className={`w-fit px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                          b.booking_status === 'Approved' || b.booking_status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                          b.booking_status === 'Cancelled' || b.booking_status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                          ['Approved', 'APPROVED'].includes(b.booking_status) ? 'bg-green-100 text-green-700' :
+                          ['Cancelled', 'CANCELLED'].includes(b.booking_status) ? 'bg-red-100 text-red-700' :
                           'bg-amber-100 text-amber-700'
                         }`}>
                           {b.booking_status || 'Pending'}
                         </span>
                         <span className={`w-fit px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                          b.payment_status === 'Paid' || b.payment_status === 'PAID' ? 'bg-green-100 text-green-700' :
-                          b.payment_status === 'Downpayment' || b.payment_status === 'DOWNPAYMENT' ? 'bg-blue-100 text-blue-700' :
+                          ['Paid', 'PAID'].includes(b.payment_status) ? 'bg-green-100 text-green-700' :
+                          ['Downpayment', 'DOWNPAYMENT'].includes(b.payment_status) ? 'bg-blue-100 text-blue-700' :
                           'bg-red-100 text-red-700'
                         }`}>
                           {b.payment_status || 'Unpaid'}
                         </span>
+                        
+                        {b.transactions?.[0]?.proof_of_payment && (
+                          <button 
+                            onClick={() => openReceipt(b.transactions[0].proof_of_payment)}
+                            className="flex items-center gap-1 text-[9px] font-bold text-blue-600 hover:text-blue-800 uppercase underline"
+                          >
+                            <FileImage size={10} /> View Receipt
+                          </button>
+                        )}
                       </div>
                     </td>
 
                     <td className="p-5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {b.booking_status !== 'Approved' && b.booking_status !== 'APPROVED' && b.booking_status !== 'Cancelled' && b.booking_status !== 'CANCELLED' && (
+                        {!['Approved', 'APPROVED', 'Cancelled', 'CANCELLED'].includes(b.booking_status) && (
                           <>
                             <button
                               onClick={() => handleApproveBooking(b.booking_id)}
                               className="p-2 bg-slate-50 hover:bg-green-50 text-slate-400 hover:text-green-600 rounded-xl transition-colors"
-                              title="Approve Booking"
                             >
                               <Check size={16} />
                             </button>
                             <button
                               onClick={() => handleCancelBooking(b.booking_id)}
                               className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-colors"
-                              title="Cancel Booking"
                             >
                               <X size={16} />
                             </button>
                           </>
-                        )}
-                        {(b.booking_status === 'Approved' || b.booking_status === 'APPROVED') && (
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2">Completed</span>
-                        )}
-                        {(b.booking_status === 'Cancelled' || b.booking_status === 'CANCELLED') && (
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-red-400 px-2">Rejected</span>
                         )}
                       </div>
                     </td>

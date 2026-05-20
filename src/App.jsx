@@ -6,9 +6,12 @@ import ClientDashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard'; 
 import BookNow from './pages/booking';
 import AdminEvents from './components/AdminEvents';
+import ManageEvent from './components/ManageEvent';
 import AdminBookings from './components/Adminbookings';
 import AdminUsers from './components/AdminUsers';
 import AdminProfile from './components/AdminsProfile';
+import OnlinePaymentModal from './components/OnlinePaymentModal';
+import ClientPayment from './components/ClientPayments';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -124,6 +127,11 @@ function App() {
         />
 
         <Route 
+          path="/ManageEvent/:id" 
+          element={!isRecoveryMode && session && role === 'admin' ? <ManageEvent /> : <Navigate to="/" replace />} 
+        />
+
+        <Route 
           path="/AdminBookings" 
           element={!isRecoveryMode && session && role === 'admin' ? <AdminBookings /> : <Navigate to="/" replace />} 
         />
@@ -141,6 +149,16 @@ function App() {
         <Route 
           path="/booking" 
           element={session ? <BookNow /> : <Navigate to="/" replace />} 
+        />
+
+        <Route 
+          path="/test-payment" 
+          element={
+            <div className="p-8 bg-slate-100 min-h-screen grid grid-cols-1 md:grid-cols-2 gap-6">
+              <OnlinePaymentModal />
+              <ClientPayment bookingId="8" totalAmount="450" />
+            </div>
+          } 
         />
 
         <Route path="*" element={<Navigate to="/" replace />} />

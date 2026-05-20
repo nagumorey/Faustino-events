@@ -1,6 +1,7 @@
 import { supabase } from '../supabaseClient.js';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useVoice } from './hooks/useVoice';
 
 const SignupForm = () => {
   const [firstName, setFirstName] = useState('');
