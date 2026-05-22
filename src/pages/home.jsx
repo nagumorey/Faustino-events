@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient"; 
 import LoginForm from "../components/LoginForm";
 import SignupForm from "../components/SignupForm";
 import ForgotPassword from "../components/ForgotPassword";
 import { useVoice } from '../components/hooks/useVoice';
-import { Mic } from 'lucide-react';
+import { Mic, Volume2, Keyboard } from 'lucide-react';
 
 import EVL from "../assets/EVL.jpg";
 import LVE from "../assets/LVE.jpg";
@@ -14,6 +14,10 @@ import Debut from "../assets/Debut.jpg";
 function Home({ isRecovering }) { 
   const navigate = useNavigate();
   const { speak } = useVoice();
+  
+  const [isListening, setIsListening] = useState(false);
+  const [focusedElement, setFocusedElement] = useState("");
+  const recognitionRef = useRef(null);
   
   const getHasToken = () => {
     const hash = window.location.hash;
@@ -28,46 +32,210 @@ function Home({ isRecovering }) {
   const [activeTab, setActiveTab] = useState(getHasToken() ? 'forgot' : 'login');
   const [session, setSession] = useState(null);
 
+  const speakText = (text) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const readFocusedElement = () => {
+    const activeElement = document.activeElement;
+    let textToRead = "";
+
+    if (activeElement) {
+      if (activeElement.classList.contains("mic-button")) {
+        textToRead = "Microphone button. Press Enter to activate voice commands.";
+      }
+      else if (activeElement.classList.contains("signup-btn")) {
+        textToRead = "Sign Up button. Press Enter to create an account.";
+      }
+      else if (activeElement.classList.contains("login-btn")) {
+        textToRead = "Log In button. Press Enter to sign in to your account.";
+      }
+      else if (activeElement.classList.contains("dashboard-btn")) {
+        textToRead = "Dashboard button. Press Enter to go to your dashboard.";
+      }
+      else if (activeElement.classList.contains("logout-btn")) {
+        textToRead = "Logout button. Press Enter to sign out.";
+      }
+      else if (activeElement.classList.contains("home-link")) {
+        textToRead = "Home link. Press Enter to go to home section.";
+      }
+      else if (activeElement.classList.contains("about-link")) {
+        textToRead = "About Us link. Press Enter to go to about section.";
+      }
+      else if (activeElement.classList.contains("events-link")) {
+        textToRead = "Events link. Press Enter to go to events section.";
+      }
+      else if (activeElement.classList.contains("packages-link")) {
+        textToRead = "Packages link. Press Enter to view our packages.";
+      }
+      else if (activeElement.classList.contains("package-card")) {
+        textToRead = "Package image. Press Enter to view packages.";
+      }
+      else if (activeElement.getAttribute("aria-label")) {
+        textToRead = activeElement.getAttribute("aria-label");
+      }
+      else if (activeElement.tagName === "BUTTON") {
+        textToRead = activeElement.innerText || "Button";
+      }
+      else if (activeElement.tagName === "A") {
+        textToRead = activeElement.innerText || "Link";
+      }
+      
+      if (textToRead) {
+        speakText(textToRead);
+        setFocusedElement(textToRead);
+        setTimeout(() => setFocusedElement(""), 2000);
+      }
+    }
+  };
+
+  const executeCommand = (command) => {
+    console.log("Command:", command);
+
+    if (command === "mic" || command === "microphone") {
+      startVoiceCommand();
+    }
+    else if (command === "login" || command === "log in") {
+      setShowAuth(true);
+      setActiveTab('login');
+      speakText("Login form opened");
+    }
+    else if (command === "signup" || command === "sign up") {
+      setShowAuth(true);
+      setActiveTab('signup');
+      speakText("Sign up form opened");
+    }
+    else if (command === "packages") {
+      navigate('/ClientDashboard');
+      speakText("Opening packages");
+    }
+    else if (command === "home") {
+      setShowAuth(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      speakText("Going to home");
+    }
+    else if (command === "about" || command === "about us") {
+      document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
+      speakText("Scrolling to about us");
+    }
+    else if (command === "events") {
+      document.getElementById('celebrations')?.scrollIntoView({ behavior: 'smooth' });
+      speakText("Scrolling to events");
+    }
+    else if (command === "find us" || command === "location") {
+      document.getElementById('find-us')?.scrollIntoView({ behavior: 'smooth' });
+      speakText("Scrolling to location");
+    }
+    else if (command === "close" || command === "close modal") {
+      if (showAuth) {
+        setShowAuth(false);
+        setActiveTab('login');
+        speakText("Closed");
+      }
+    }
+    else if (command === "dashboard") {
+      if (session) {
+        navigate(session.user.email?.includes('admin') ? '/AdminDashboard' : '/ClientDashboard');
+        speakText("Opening dashboard");
+      } else {
+        speakText("Please login first");
+      }
+    }
+    else if (command === "logout") {
+      if (session) {
+        handleLogout();
+      } else {
+        speakText("You are not logged in");
+      }
+    }
+    else if (command === "help") {
+      speakText("Commands: mic, login, signup, packages, home, about, events, find us, close, dashboard, logout");
+    }
+  };
+
   const startVoiceCommand = () => {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) {
-      speak("Voice command not supported.");
+    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Speech recognition not supported");
       return;
     }
 
-    const rec = new Recognition();
-    rec.lang = 'en-US';
-    rec.start();
-    speak("Listening");
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+      speakText("Voice off");
+      return;
+    }
 
-    rec.onresult = (event) => {
-      const command = event.results[0][0].transcript.toLowerCase();
-      
-      if (command.includes("login") || command.includes("log in")) {
-        setShowAuth(true);
-        setActiveTab('login');
-      } else if (command.includes("signup") || command.includes("sign up")) {
-        setShowAuth(true);
-        setActiveTab('signup');
-      } else if (command.includes("package") || command.includes("packages")) {
-        navigate('/ClientDashboard');
-      } else if (command.includes("home")) {
-        setShowAuth(false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else if (command.includes("about")) {
-        document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
-      } else if (command.includes("event") || command.includes("events")) {
-        document.getElementById('celebrations')?.scrollIntoView({ behavior: 'smooth' });
-      } else if (command.includes("find us") || command.includes("location")) {
-        document.getElementById('find-us')?.scrollIntoView({ behavior: 'smooth' });
-      }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      speakText("Listening");
     };
+
+    recognition.onresult = (event) => {
+      const command = event.results[0][0].transcript.toLowerCase().trim();
+      executeCommand(command);
+      recognition.stop();
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.log("Error:", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
   };
 
   useEffect(() => {
-    speak("Maligayang pagdating sa Faustino's Event Place.");
+    const handleKeyDown = (e) => {
+      if (e.key === "Tab") {
+        setTimeout(() => readFocusedElement(), 100);
+      }
+      else if (e.key === "Enter") {
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement.click) {
+          activeElement.click();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    
+    const allInteractive = document.querySelectorAll("button, a, [tabindex]");
+    allInteractive.forEach(el => {
+      el.addEventListener("focus", readFocusedElement);
+    });
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      allInteractive.forEach(el => {
+        el.removeEventListener("focus", readFocusedElement);
+      });
+    };
+  }, [showAuth, session]);
+
+  useEffect(() => {
+    speakText("Maligayang pagdating sa Faustino's Event Place. Press Tab to navigate, or press the mic button for voice commands.");
   }, []);
-  
+
   useEffect(() => {
     if (getHasToken()) {
       setShowAuth(true);
@@ -105,7 +273,7 @@ function Home({ isRecovering }) {
           setShowAuth(true);
           setActiveTab('login');
           window.history.replaceState(null, null, window.location.pathname);
-          alert("Password updated successfully!");
+          speakText("Password updated successfully");
         }, 1500);
       }
     });
@@ -117,37 +285,103 @@ function Home({ isRecovering }) {
     setSession(null);
     setShowAuth(false);
     navigate('/', { replace: true });
+    speakText("Logged out");
   };
 
   return (
     <div className="min-h-screen text-white font-sans bg-black selection:bg-yellow-500/30 scroll-smooth">
+      {focusedElement && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm">
+          <Volume2 size={14} className="inline mr-2" />
+          {focusedElement}
+        </div>
+      )}
+
+      {isListening && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[#D4AF37] text-black px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg">
+          <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
+          <Mic size={14} />
+          <span className="text-xs font-bold">Say a command...</span>
+        </div>
+      )}
+
+      <div className="fixed top-20 right-4 bg-black/90 text-white p-3 rounded-xl z-40 text-xs max-w-xs border border-white/10">
+        <Keyboard size={14} className="inline mr-1" />
+        <span className="font-bold">Accessibility:</span>
+        <p className="mt-1">Press TAB to navigate, ENTER to select</p>
+        <p>Press MIC button or say "mic" for voice commands</p>
+        <p>Say "help" for all voice commands</p>
+      </div>
+
       <nav className="flex items-center justify-between px-12 py-6 fixed top-0 w-full z-[100] bg-black/40 backdrop-blur-md border-b border-white/5">
-        <div className="text-2xl font-black text-yellow-500 italic tracking-tighter cursor-pointer" onClick={() => handleNavAction('home')} tabIndex="0">Faustino's</div>
+        <div 
+          className="text-2xl font-black text-yellow-500 italic tracking-tighter cursor-pointer"
+          onClick={() => handleNavAction('home')}
+          tabIndex={0}
+          aria-label="Faustino's home"
+        >
+          Faustino's
+        </div>
         
         <div className="hidden md:flex gap-10 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300">
-          <a href="#home" className="hover:text-yellow-500 transition-all">Home</a>
-          <a href="#about" className="hover:text-yellow-500 transition-all">About Us</a>
-          <a href="#celebrations" className="hover:text-yellow-500 transition-all uppercase">Event</a>
-          <button onClick={() => navigate('/ClientDashboard')} className="hover:text-yellow-500 transition-all uppercase text-[11px] font-bold tracking-[0.2em]">Packages</button>
+          <a href="#home" className="home-link hover:text-yellow-500 transition-all" tabIndex={0} aria-label="Home section">Home</a>
+          <a href="#about" className="about-link hover:text-yellow-500 transition-all" tabIndex={0} aria-label="About Us section">About Us</a>
+          <a href="#celebrations" className="events-link hover:text-yellow-500 transition-all uppercase" tabIndex={0} aria-label="Events section">Event</a>
+          <button onClick={() => navigate('/ClientDashboard')} className="packages-link hover:text-yellow-500 transition-all uppercase text-[11px] font-bold tracking-[0.2em]" tabIndex={0} aria-label="View packages">Packages</button>
         </div>
 
         <div className="flex gap-3 items-center">
-          <button onClick={startVoiceCommand} className="p-2 bg-white/10 rounded-full hover:bg-yellow-500 transition-all"><Mic size={16}/></button>
+          <button 
+            onClick={startVoiceCommand} 
+            className="mic-button p-2 bg-white/10 rounded-full hover:bg-yellow-500 transition-all"
+            tabIndex={0}
+            aria-label="Microphone button. Press Enter to activate voice commands."
+          >
+            <Mic size={16}/>
+          </button>
           {!session ? (
             <>
-              <button onClick={() => { setShowAuth(true); setActiveTab('signup'); }} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Sign Up</button>
-              <button onClick={() => { setShowAuth(true); setActiveTab('login'); }} className="text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Log In</button>
+              <button 
+                onClick={() => { setShowAuth(true); setActiveTab('signup'); }} 
+                className="signup-btn text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer"
+                tabIndex={0}
+                aria-label="Sign Up button. Press Enter to create an account."
+              >
+                Sign Up
+              </button>
+              <button 
+                onClick={() => { setShowAuth(true); setActiveTab('login'); }} 
+                className="login-btn text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer"
+                tabIndex={0}
+                aria-label="Log In button. Press Enter to sign in."
+              >
+                Log In
+              </button>
             </>
           ) : (
             <div className="flex gap-3">
-              <button onClick={() => navigate(session.user.email.includes('admin') ? '/AdminDashboard' : '/ClientDashboard')} className="text-[10px] font-black uppercase tracking-widest bg-white text-black px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Dashboard</button>
-              <button onClick={handleLogout} className="text-[10px] font-black uppercase tracking-widest border border-white/20 text-white px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer">Logout</button>
+              <button 
+                onClick={() => navigate(session.user.email.includes('admin') ? '/AdminDashboard' : '/ClientDashboard')} 
+                className="dashboard-btn text-[10px] font-black uppercase tracking-widest bg-white text-black px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer"
+                tabIndex={0}
+                aria-label="Dashboard button. Press Enter to go to your dashboard."
+              >
+                Dashboard
+              </button>
+              <button 
+                onClick={handleLogout} 
+                className="logout-btn text-[10px] font-black uppercase tracking-widest border border-white/20 text-white px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer"
+                tabIndex={0}
+                aria-label="Logout button. Press Enter to sign out."
+              >
+                Logout
+              </button>
             </div>
           )}
         </div>
       </nav>
 
-      <section id="home" className="relative h-screen flex flex-col items-center justify-center text-center px-6" tabIndex="0">
+      <section id="home" className="relative h-screen flex flex-col items-center justify-center text-center px-6" tabIndex={0} aria-label="Hero section">
         <div className="absolute inset-0 z-0">
           <img src={EVL} alt="Hero" className="w-full h-full object-cover opacity-30" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/60 to-black" />
@@ -157,7 +391,7 @@ function Home({ isRecovering }) {
         </div>
       </section>
 
-      <section id="about" className="py-32 px-12 bg-black min-h-[70vh] flex items-center" tabIndex="0">
+      <section id="about" className="py-32 px-12 bg-black min-h-[70vh] flex items-center" tabIndex={0} aria-label="About Us section">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div className="w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl border border-white/5 aspect-video">
             <img src={LVE} alt="About Us" className="w-full h-full object-cover" />
@@ -166,18 +400,29 @@ function Home({ isRecovering }) {
         </div>
       </section>
 
-      <section id="celebrations" className="py-24 px-12 bg-black border-t border-white/5" tabIndex="0">
+      <section id="celebrations" className="py-24 px-12 bg-black border-t border-white/5" tabIndex={0} aria-label="Events section">
         <div className="text-center mb-16"><h2 className="text-4xl md:text-5xl font-serif italic text-yellow-500">Our Packages</h2></div>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 pb-32">
           {[EVL, LVE, Debut].map((img, index) => (
-            <div key={index} className="group overflow-hidden rounded-xl aspect-[4/5] cursor-pointer" onClick={() => navigate('/ClientDashboard')}>
+            <div 
+              key={index} 
+              className="package-card group overflow-hidden rounded-xl aspect-[4/5] cursor-pointer" 
+              onClick={() => navigate('/ClientDashboard')}
+              tabIndex={0}
+              aria-label="Package image. Press Enter to view packages"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  navigate('/ClientDashboard');
+                }
+              }}
+            >
               <img src={img} className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105" alt="Celebration" />
             </div>
           ))}
         </div>
       </section>
 
-      <section id="find-us" className="py-24 px-12 bg-black border-t border-white/5" tabIndex="0">
+      <section id="find-us" className="py-24 px-12 bg-black border-t border-white/5" tabIndex={0} aria-label="Location section">
         <div className="max-w-7xl mx-auto space-y-12">
           <div className="text-center"><h2 className="text-4xl md:text-5xl font-serif italic text-yellow-500">Find Us</h2></div>
           <div className="w-full h-[450px] rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 relative">
@@ -194,12 +439,33 @@ function Home({ isRecovering }) {
             ) : (
               <div className="bg-[#111] p-10 rounded-2xl border border-white/10 shadow-2xl">
                 <div className="flex justify-center gap-8 mb-8 border-b border-white/5 pb-4">
-                  <button onClick={() => setActiveTab('login')} className={`text-[10px] font-black uppercase ${activeTab === 'login' ? 'text-yellow-500' : 'text-gray-400'}`}>Log In</button>
-                  <button onClick={() => setActiveTab('signup')} className={`text-[10px] font-black uppercase ${activeTab === 'signup' ? 'text-yellow-500' : 'text-gray-400'}`}>Sign Up</button>
+                  <button 
+                    onClick={() => setActiveTab('login')} 
+                    className={`text-[10px] font-black uppercase ${activeTab === 'login' ? 'text-yellow-500' : 'text-gray-400'}`}
+                    tabIndex={0}
+                    aria-label="Login tab"
+                  >
+                    Log In
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('signup')} 
+                    className={`text-[10px] font-black uppercase ${activeTab === 'signup' ? 'text-yellow-500' : 'text-gray-400'}`}
+                    tabIndex={0}
+                    aria-label="Sign Up tab"
+                  >
+                    Sign Up
+                  </button>
                 </div>
                 {activeTab === 'login' && <LoginForm onForgotClick={() => setActiveTab('forgot')} />}
                 {activeTab === 'signup' && <SignupForm />}
-                <button onClick={() => { setShowAuth(false); setActiveTab('login'); }} className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest cursor-pointer">Back to Home</button>
+                <button 
+                  onClick={() => { setShowAuth(false); setActiveTab('login'); }} 
+                  className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest cursor-pointer"
+                  tabIndex={0}
+                  aria-label="Back to home"
+                >
+                  Back to Home
+                </button>
               </div>
             )}
           </div>
