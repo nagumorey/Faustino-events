@@ -7,7 +7,6 @@ const ClientProfile = ({ onClose, onProfileUpdate }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({ first_name: "", last_name: "", phone_number: "" });
   const [voiceFeedback, setVoiceFeedback] = useState("");
-  
 
   const speak = (text) => {
     const utterance = new SpeechSynthesisUtterance(text);
