@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
-import { Download, XCircle, ArrowLeft } from 'lucide-react';
+import { Download, XCircle, ArrowLeft, Image } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
 
 const BookingReceipt = ({ booking, onClose }) => {
   const receiptRef = useRef(null);
@@ -17,6 +18,26 @@ const BookingReceipt = ({ booking, onClose }) => {
     };
     
     html2pdf().set(opt).from(element).save();
+  };
+
+  const downloadAsImage = async () => {
+    const element = receiptRef.current;
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true
+      });
+      const image = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `Receipt_${booking?.booking_id || 'booking'}.png`;
+      link.href = image;
+      link.click();
+    } catch (error) {
+      console.error("Error generating image:", error);
+      alert("Error generating image. Please try again.");
+    }
   };
 
   const formatDate = (dateString) => {
@@ -42,6 +63,9 @@ const BookingReceipt = ({ booking, onClose }) => {
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
       <div className="max-w-3xl w-full">
         <div className="flex justify-end gap-2 mb-4 no-print">
+          <button onClick={downloadAsImage} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-purple-700 transition-all shadow-md">
+            <Image size={14} /> Download as Image
+          </button>
           <button onClick={downloadAsPDF} className="flex items-center gap-2 px-4 py-2 bg-[#B8860B] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#9a7009] transition-all shadow-md">
             <Download size={14} /> Download PDF
           </button>
