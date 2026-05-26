@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { LayoutDashboard, Users, Calendar, User, LogOut, Star, CreditCard, Bell, Check } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, User, LogOut, Star, CreditCard, Bell, Check, ChevronLeft, ChevronRight, History } from 'lucide-react';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -14,6 +14,10 @@ const AdminDashboard = () => {
     clients: 0,
     revenue: 0
   });
+  const [approvedBookings, setApprovedBookings] = useState([]);
+  const [completedBookings, setCompletedBookings] = useState([]);
+  const [showArchived, setShowArchived] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const fetchNotifications = async () => {
     const { data, error } = await supabase
@@ -25,6 +29,205 @@ const AdminDashboard = () => {
       setNotifications(data);
     }
   };
+
+  const updateCompletedStatus = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    
+    const { error } = await supabase
+      .from('bookings')
+      .update({ booking_status: 'Completed' })
+      .lt('event_date', todayStr)
+      .eq('booking_status', 'Approved');
+    
+    if (error) console.error("Error updating completed status:", error);
+  };
+
+  const fetchApprovedBookings = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(`
+        booking_id,
+        event_type,
+        event_name,
+        event_date,
+        appointment_time,
+        end_time,
+        total_pax,
+        booking_status,
+        user_id,
+        first_name,
+        last_name,
+        email
+      `)
+      .eq("booking_status", "Approved")
+      .gte("event_date", todayStr)
+      .order("event_date", { ascending: true });
+
+    if (!error && data) {
+      const bookingsWithNames = await Promise.all(
+        data.map(async (booking) => {
+          let clientName = booking.first_name || '';
+          let clientLastName = booking.last_name || '';
+          let clientEmail = booking.email || '';
+          
+          if ((!clientName || !clientLastName) && booking.user_id) {
+            const { data: clientData } = await supabase
+              .from("clients")
+              .select("first_name, last_name, email")
+              .eq("user_id", booking.user_id)
+              .maybeSingle();
+            
+            if (clientData) {
+              clientName = clientData.first_name || clientName;
+              clientLastName = clientData.last_name || clientLastName;
+              clientEmail = clientData.email || clientEmail;
+            }
+          }
+          
+          return {
+            ...booking,
+            client_first_name: clientName || 'Guest',
+            client_last_name: clientLastName || '',
+            client_email: clientEmail || 'No email'
+          };
+        })
+      );
+      
+      setApprovedBookings(bookingsWithNames);
+    }
+  };
+
+  const fetchCompletedBookings = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(`
+        booking_id,
+        event_type,
+        event_name,
+        event_date,
+        appointment_time,
+        end_time,
+        total_pax,
+        booking_status,
+        user_id,
+        first_name,
+        last_name,
+        email
+      `)
+      .eq("booking_status", "Completed")
+      .order("event_date", { ascending: false });
+
+    if (!error && data) {
+      const bookingsWithNames = await Promise.all(
+        data.map(async (booking) => {
+          let clientName = booking.first_name || '';
+          let clientLastName = booking.last_name || '';
+          let clientEmail = booking.email || '';
+          
+          if ((!clientName || !clientLastName) && booking.user_id) {
+            const { data: clientData } = await supabase
+              .from("clients")
+              .select("first_name, last_name, email")
+              .eq("user_id", booking.user_id)
+              .maybeSingle();
+            
+            if (clientData) {
+              clientName = clientData.first_name || clientName;
+              clientLastName = clientData.last_name || clientLastName;
+              clientEmail = clientData.email || clientEmail;
+            }
+          }
+          
+          return {
+            ...booking,
+            client_first_name: clientName || 'Guest',
+            client_last_name: clientLastName || '',
+            client_email: clientEmail || 'No email'
+          };
+        })
+      );
+      
+      setCompletedBookings(bookingsWithNames);
+    }
+  };
+
+  const fetchRevenue = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('amount_paid, down_payment, payment_status');
+
+      if (error) {
+        console.error("Revenue fetch error:", error);
+        return 0;
+      }
+
+      if (!data || data.length === 0) {
+        return 0;
+      }
+
+      let total = 0;
+      data.forEach(booking => {
+        if (booking.payment_status === 'Paid' || booking.payment_status === 'Partial' || booking.payment_status === 'Downpayment') {
+          let amount = 0;
+          if (booking.amount_paid && booking.amount_paid > 0) {
+            amount = parseFloat(booking.amount_paid);
+          } else if (booking.down_payment && booking.down_payment > 0) {
+            amount = parseFloat(booking.down_payment);
+          }
+          total += amount;
+        }
+      });
+      
+      return total;
+    } catch (err) {
+      console.error("Revenue calculation error:", err);
+      return 0;
+    }
+  };
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+    return days;
+  };
+
+  const getBookingsForDate = (date) => {
+    if (!date) return [];
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+    return approvedBookings.filter(booking => booking.event_date === dateStr);
+  };
+
+  const changeMonth = (increment) => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + increment, 1));
+  };
+
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   useEffect(() => {
     let isMounted = true;
@@ -49,22 +252,20 @@ const AdminDashboard = () => {
           return;
         }
 
-        await fetchNotifications();
-
-        const [bookingsRes, eventsRes, clientsRes, revenueRes] = await Promise.all([
-          supabase.from('bookings').select('*', { count: 'exact', head: true }),
-          supabase.from('events').select('*', { count: 'exact', head: true }),
-          supabase.from('clients').select('*', { count: 'exact', head: true }),
-          supabase.from('bookings').select('paid_amount')
+        await updateCompletedStatus();
+        await Promise.all([
+          fetchNotifications(),
+          fetchApprovedBookings(),
+          fetchCompletedBookings()
         ]);
 
-        let totalRevenue = 0;
-        if (revenueRes.data) {
-          totalRevenue = revenueRes.data.reduce((sum, item) => {
-            const price = parseFloat(item.paid_amount) || 0;
-            return sum + price;
-          }, 0);
-        }
+        const [bookingsRes, eventsRes, clientsRes] = await Promise.all([
+          supabase.from('bookings').select('*', { count: 'exact', head: true }),
+          supabase.from('events').select('*', { count: 'exact', head: true }),
+          supabase.from('clients').select('*', { count: 'exact', head: true })
+        ]);
+
+        const totalRevenue = await fetchRevenue();
 
         if (isMounted) {
           setCounts({
@@ -76,6 +277,7 @@ const AdminDashboard = () => {
           setLoading(false);
         }
       } catch (error) {
+        console.error("Dashboard error:", error);
         if (isMounted) setLoading(false);
       }
     };
@@ -89,6 +291,27 @@ const AdminDashboard = () => {
         { event: "INSERT", schema: "public", table: "notifications" },
         () => {
           fetchNotifications();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "bookings" },
+        () => {
+          fetchRevenue().then(newRevenue => {
+            if (isMounted) {
+              setCounts(prev => ({ ...prev, revenue: newRevenue }));
+            }
+          });
+          fetchNotifications();
+          fetchApprovedBookings();
+          fetchCompletedBookings();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "bookings" },
+        () => {
+          fetchApprovedBookings();
         }
       )
       .subscribe();
@@ -137,6 +360,7 @@ const AdminDashboard = () => {
   };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const days = getDaysInMonth(currentMonth);
 
   const stats = [
     { label: "Bookings", value: counts.bookings.toString(), icon: <Calendar size={18} />, color: "bg-red-500", path: "/AdminBookings" },
@@ -275,6 +499,165 @@ const AdminDashboard = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-10">
+          <div className="bg-gradient-to-r from-[#1e293b] to-[#0f172a] px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <Calendar size={20} className="text-[#DAA520]" />
+              <h3 className="text-white font-bold uppercase tracking-wider text-sm">Approved Schedules Calendar</h3>
+            </div>
+            <div className="flex items-center gap-4">
+              <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
+                <ChevronLeft size={20} className="text-white" />
+              </button>
+              <span className="text-white font-bold">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</span>
+              <button onClick={() => changeMonth(1)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
+                <ChevronRight size={20} className="text-white" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            <div className="grid grid-cols-7 gap-2 mb-4">
+              {weekDays.map((day, idx) => (
+                <div key={idx} className="text-center text-[10px] font-black uppercase text-slate-400 py-2">
+                  {day}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {days.map((day, idx) => {
+                const bookingsOnDay = day ? getBookingsForDate(day) : [];
+                const hasBookings = bookingsOnDay.length > 0;
+                return (
+                  <div
+                    key={idx}
+                    className={`min-h-[100px] p-2 rounded-xl border transition-all ${
+                      day 
+                        ? hasBookings 
+                          ? 'bg-[#B8860B]/10 border-[#B8860B]/30 cursor-pointer hover:bg-[#B8860B]/20' 
+                          : 'bg-white border-slate-100 hover:border-slate-200'
+                        : 'bg-slate-50/30 border-slate-50'
+                    }`}
+                  >
+                    {day && (
+                      <>
+                        <div className="flex justify-between items-start">
+                          <span className={`text-xs font-bold ${hasBookings ? 'text-[#B8860B]' : 'text-slate-500'}`}>
+                            {day}
+                          </span>
+                          {hasBookings && (
+                            <span className="text-[8px] font-black bg-[#B8860B] text-white px-1.5 py-0.5 rounded-full">
+                              {bookingsOnDay.length}
+                            </span>
+                          )}
+                        </div>
+                        {hasBookings && (
+                          <div className="mt-2 space-y-1">
+                            {bookingsOnDay.slice(0, 2).map((booking, bIdx) => (
+                              <div key={bIdx} className="text-[9px] font-medium text-slate-600 truncate" title={`${booking.client_first_name} ${booking.client_last_name} - ${booking.appointment_time}`}>
+                                {booking.appointment_time?.substring(0,5)} {booking.client_first_name}
+                              </div>
+                            ))}
+                            {bookingsOnDay.length > 2 && (
+                              <div className="text-[8px] text-[#B8860B] font-bold">
+                                +{bookingsOnDay.length - 2} more
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/30 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-[#B8860B]/20 rounded border border-[#B8860B]/30"></div>
+                <span className="text-[9px] text-slate-500">With Approved Bookings</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-white rounded border border-slate-200"></div>
+                <span className="text-[9px] text-slate-500">No Bookings</span>
+              </div>
+            </div>
+            <div className="text-[9px] text-slate-400">
+              Total Upcoming: {approvedBookings.length} bookings
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              {showArchived ? <History size={16} className="text-slate-500" /> : <Calendar size={16} className="text-slate-500" />}
+              <h3 className="font-bold uppercase tracking-wider text-sm text-slate-700">
+                {showArchived ? "Event History / Archive" : "Upcoming Approved Events"}
+              </h3>
+            </div>
+            <button
+              onClick={() => setShowArchived(!showArchived)}
+              className="text-[9px] font-bold text-[#B8860B] hover:underline flex items-center gap-1"
+            >
+              {showArchived ? "← View Upcoming" : "View History →"}
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50">
+                <tr className="text-[9px] font-black uppercase text-slate-400">
+                  <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3">Time</th>
+                  <th className="px-6 py-3">Client</th>
+                  <th className="px-6 py-3">Event Type</th>
+                  <th className="px-6 py-3">Pax</th>
+                  <th className="px-6 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {(showArchived ? completedBookings : approvedBookings).slice(0, 10).map((booking) => (
+                  <tr key={booking.booking_id} className="hover:bg-slate-50/50 transition-colors text-sm">
+                    <td className="px-6 py-3 font-mono text-xs">{booking.event_date}</td>
+                    <td className="px-6 py-3 text-xs">{booking.appointment_time?.substring(0,5)} - {booking.end_time?.substring(0,5)}</td>
+                    <td className="px-6 py-3">
+                      <div>
+                        <p className="font-medium text-slate-800">{booking.client_first_name} {booking.client_last_name}</p>
+                        <p className="text-[9px] text-slate-400">{booking.client_email}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-3 text-xs">{booking.event_type || booking.event_name}</td>
+                    <td className="px-6 py-3 text-xs">{booking.total_pax} pax</td>
+                    <td className="px-6 py-3">
+                      <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase ${
+                        showArchived ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'
+                      }`}>
+                        {showArchived ? 'Completed' : 'Approved'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {(showArchived ? completedBookings : approvedBookings).length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-10 text-center text-slate-400 text-xs uppercase">
+                      {showArchived ? "No completed events yet" : "No approved bookings yet"}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {(showArchived ? completedBookings : approvedBookings).length > 10 && (
+            <div className="px-6 py-3 border-t border-slate-100 text-right">
+              <button onClick={() => navigate("/AdminBookings")} className="text-[9px] font-bold text-[#B8860B] hover:underline">
+                View all {(showArchived ? completedBookings : approvedBookings).length} {(showArchived ? "completed" : "approved")} bookings →
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>

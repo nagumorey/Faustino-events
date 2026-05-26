@@ -95,66 +95,107 @@ function Home({ isRecovering }) {
   };
 
   const executeCommand = (command) => {
-    console.log("Command:", command);
+    console.log("Command recognized:", command);
+    const lowerCommand = command.toLowerCase();
 
-    if (command === "mic" || command === "microphone") {
+    if (lowerCommand === "mic" || lowerCommand === "microphone" || lowerCommand === "microphone button") {
       startVoiceCommand();
     }
-    else if (command === "login" || command === "log in") {
+    else if (lowerCommand === "login" || lowerCommand === "log in" || lowerCommand === "sign in" || lowerCommand.includes("login")) {
       setShowAuth(true);
       setActiveTab('login');
       speakText("Login form opened");
     }
-    else if (command === "signup" || command === "sign up") {
+    else if (lowerCommand === "signup" || lowerCommand === "sign up" || lowerCommand === "create account" || lowerCommand.includes("signup")) {
       setShowAuth(true);
       setActiveTab('signup');
       speakText("Sign up form opened");
     }
-    else if (command === "packages") {
-      navigate('/ClientDashboard');
+    else if (lowerCommand === "packages" || lowerCommand === "package" || lowerCommand === "view packages" || 
+             lowerCommand === "show packages" || lowerCommand === "see packages" || lowerCommand === "check packages" ||
+             lowerCommand === "our packages" || lowerCommand === "view package" || lowerCommand.includes("package")) {
       speakText("Opening packages");
+      setTimeout(() => {
+        navigate('/ClientDashboard');
+      }, 300);
     }
-    else if (command === "home") {
+    else if (lowerCommand === "home" || lowerCommand === "go home" || lowerCommand === "back to home" || lowerCommand === "home page") {
       setShowAuth(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       speakText("Going to home");
     }
-    else if (command === "about" || command === "about us") {
-      document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
-      speakText("Scrolling to about us");
+    else if (lowerCommand === "about" || lowerCommand === "about us" || lowerCommand === "go to about" || lowerCommand === "about section" ||
+             lowerCommand.includes("about")) {
+      const aboutSection = document.getElementById('about');
+      if (aboutSection) {
+        aboutSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        speakText("Scrolling to about us");
+      } else {
+        speakText("About section not found");
+      }
     }
-    else if (command === "events") {
-      document.getElementById('celebrations')?.scrollIntoView({ behavior: 'smooth' });
-      speakText("Scrolling to events");
+    else if (lowerCommand === "events" || lowerCommand === "event" || lowerCommand === "our events" || lowerCommand === "view events" ||
+             lowerCommand === "show events" || lowerCommand === "check events" || lowerCommand.includes("event")) {
+      const eventsSection = document.getElementById('celebrations');
+      if (eventsSection) {
+        eventsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        speakText("Scrolling to events");
+      } else {
+        speakText("Events section not found");
+      }
     }
-    else if (command === "find us" || command === "location") {
-      document.getElementById('find-us')?.scrollIntoView({ behavior: 'smooth' });
-      speakText("Scrolling to location");
+    else if (lowerCommand === "find us" || lowerCommand === "location" || lowerCommand === "find location" || 
+             lowerCommand === "map" || lowerCommand === "where are you" || lowerCommand === "address" ||
+             lowerCommand === "find" || lowerCommand === "our location" || lowerCommand.includes("location") ||
+             lowerCommand.includes("find")) {
+      const locationSection = document.getElementById('find-us');
+      if (locationSection) {
+        locationSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        speakText("Scrolling to location");
+      } else {
+        speakText("Location section not found");
+      }
     }
-    else if (command === "close" || command === "close modal") {
+    else if (lowerCommand === "close" || lowerCommand === "close modal" || lowerCommand === "close form" || lowerCommand === "cancel") {
       if (showAuth) {
         setShowAuth(false);
         setActiveTab('login');
         speakText("Closed");
+      } else {
+        speakText("Nothing to close");
       }
     }
-    else if (command === "dashboard") {
+    else if (lowerCommand === "dashboard" || lowerCommand === "my dashboard" || lowerCommand === "go to dashboard") {
       if (session) {
-        navigate(session.user.email?.includes('admin') ? '/AdminDashboard' : '/ClientDashboard');
+        const isAdmin = session.user.email?.toLowerCase().includes('admin');
+        navigate(isAdmin ? '/AdminDashboard' : '/ClientDashboard');
         speakText("Opening dashboard");
       } else {
         speakText("Please login first");
+        setShowAuth(true);
+        setActiveTab('login');
       }
     }
-    else if (command === "logout") {
+    else if (lowerCommand === "logout" || lowerCommand === "sign out" || lowerCommand === "log out") {
       if (session) {
         handleLogout();
       } else {
         speakText("You are not logged in");
       }
     }
-    else if (command === "help") {
-      speakText("Commands: mic, login, signup, packages, home, about, events, find us, close, dashboard, logout");
+    else if (lowerCommand === "help" || lowerCommand === "what can I say" || lowerCommand === "commands" || lowerCommand === "help me") {
+      speakText("Commands: mic, login, signup, packages, view packages, home, about, about us, events, find us, location, close, dashboard, logout, scroll up, scroll down");
+    }
+    else if (lowerCommand === "scroll up" || lowerCommand === "up" || lowerCommand === "go up") {
+      window.scrollBy({ top: -300, behavior: 'smooth' });
+      speakText("Scrolling up");
+    }
+    else if (lowerCommand === "scroll down" || lowerCommand === "down" || lowerCommand === "go down") {
+      window.scrollBy({ top: 300, behavior: 'smooth' });
+      speakText("Scrolling down");
+    }
+    else {
+      speakText("Command not recognized. Say help for list of commands.");
     }
   };
 
@@ -176,8 +217,9 @@ function Home({ isRecovering }) {
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = "en-US";
+    recognition.maxAlternatives = 5;
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -185,14 +227,36 @@ function Home({ isRecovering }) {
     };
 
     recognition.onresult = (event) => {
-      const command = event.results[0][0].transcript.toLowerCase().trim();
-      executeCommand(command);
+      let command = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          command = event.results[i][0].transcript.toLowerCase().trim();
+          break;
+        }
+      }
+      
+      if (command) {
+        console.log("Recognized:", command);
+        executeCommand(command);
+      } else if (event.results[0]) {
+        const alternative = event.results[0][0].transcript.toLowerCase().trim();
+        console.log("Alternative:", alternative);
+        executeCommand(alternative);
+      }
+      
       recognition.stop();
       setIsListening(false);
     };
 
     recognition.onerror = (event) => {
       console.log("Error:", event.error);
+      if (event.error === 'no-speech') {
+        speakText("I didn't hear anything. Please try again.");
+      } else if (event.error === 'not-allowed') {
+        speakText("Microphone access denied. Please allow microphone access.");
+      } else if (event.error === 'network') {
+        speakText("Network error. Please check your connection.");
+      }
       setIsListening(false);
     };
 

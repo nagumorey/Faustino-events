@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
-import { Check, X, Calendar, Clock, Users, Save, FileImage } from 'lucide-react';
+import { Check, X, Calendar, Clock, Users, Save, FileImage, User, Search, Percent, CreditCard, Trash2 } from 'lucide-react';
 
 const AdminBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingValues, setEditingValues] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
           *,
@@ -18,28 +21,112 @@ const AdminBookings = () => {
             proof_of_payment
           )
         `)
-        .order('booking_id', { ascending: true });
+        .order('booking_id', { ascending: false });
 
-      if (error) {
-        console.error("Fetch Error:", error.message);
-      } else {
-        setBookings(data || []);
-        const initialInputs = {};
-        data.forEach(b => {
-          initialInputs[b.booking_id] = b.paid_amount || 0;
-        });
-        setEditingValues(initialInputs);
+      if (bookingsError) throw bookingsError;
+      
+      if (!bookingsData || bookingsData.length === 0) {
+        setBookings([]);
+        setLoading(false);
+        return;
       }
+
+      const userIds = [...new Set(bookingsData.map(b => b.user_id).filter(id => id))];
+      const eventIds = [...new Set(bookingsData.map(b => b.event_id).filter(id => id && id !== null))];
+
+      const [clientsResult, eventsResult] = await Promise.all([
+        userIds.length > 0 
+          ? supabase.from('clients').select('user_id, first_name, last_name, email').in('user_id', userIds)
+          : { data: [] },
+        eventIds.length > 0 
+          ? supabase.from('events').select('event_id, event_name').in('event_id', eventIds)
+          : { data: [] }
+      ]);
+
+      const clientsMap = {};
+      if (clientsResult.data) {
+        clientsResult.data.forEach(client => {
+          clientsMap[client.user_id] = {
+            name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'Unknown',
+            email: client.email || 'No email',
+            first_name: client.first_name || '',
+            last_name: client.last_name || ''
+          };
+        });
+      }
+
+      const eventsMap = {};
+      if (eventsResult.data) {
+        eventsResult.data.forEach(event => {
+          eventsMap[event.event_id] = event.event_name;
+        });
+      }
+
+      const enrichedBookings = bookingsData.map(b => {
+        let finalEventName = 'Unknown Event';
+        
+        if (b.party_package && b.party_package !== 'NULL' && b.party_package !== null && b.party_package !== 'null') {
+          finalEventName = b.party_package;
+        }
+        else if (b.event_id && eventsMap[b.event_id]) {
+          finalEventName = eventsMap[b.event_id];
+        }
+        else if (b.event_type && b.event_type !== 'NULL' && b.event_type !== null && b.event_type !== 'null') {
+          finalEventName = b.event_type;
+        }
+        else if (b.event_name && b.event_name !== 'NULL' && b.event_name !== null && b.event_name !== 'null') {
+          finalEventName = b.event_name;
+        }
+        
+        const totalAmount = parseFloat(b.amount || b.total_amount || 0);
+        const paidAmt = parseFloat(b.amount_paid || 0);
+        const downAmt = parseFloat(b.down_payment || 0);
+        const remainingBal = parseFloat(b.remaining_balance || (totalAmount - paidAmt) || 0);
+        
+        let clientName = 'Guest User';
+        let clientEmail = 'No email';
+        
+        const clientFromMap = clientsMap[b.user_id];
+        if (clientFromMap && clientFromMap.name !== 'Unknown') {
+          clientName = clientFromMap.name;
+          clientEmail = clientFromMap.email;
+        } else if (b.first_name && b.first_name !== 'NULL' && b.first_name !== null && b.first_name !== 'Guest') {
+          clientName = `${b.first_name} ${b.last_name || ''}`.trim();
+          clientEmail = b.email || 'No email';
+        } else if (b.email && b.email !== 'NULL') {
+          clientName = b.email.split('@')[0];
+          clientEmail = b.email;
+        }
+        
+        return {
+          ...b,
+          client_info: { name: clientName, email: clientEmail },
+          event_name: finalEventName,
+          total_amount_display: totalAmount,
+          amount_paid_display: paidAmt,
+          down_payment_display: downAmt,
+          remaining_balance_display: remainingBal > 0 ? remainingBal : 0
+        };
+      });
+      
+      setBookings(enrichedBookings);
+      
+      const initialInputs = {};
+      enrichedBookings.forEach(b => {
+        initialInputs[b.booking_id] = b.amount_paid_display || 0;
+      });
+      setEditingValues(initialInputs);
+      
     } catch (err) {
-      console.error("Runtime Error:", err);
+      console.error("Fetch Error:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [fetchBookings]);
 
   const handleApproveBooking = async (bookingId) => {
     try {
@@ -50,22 +137,6 @@ const AdminBookings = () => {
         .eq('booking_id', numericBookingId);
 
       if (error) throw error;
-
-      const generatedTxId = `TX-${numericBookingId}-${Date.now()}`;
-      const { error: txError } = await supabase
-        .from('transactions')
-        .insert([
-          {
-            transaction_id: generatedTxId,
-            booking_id: numericBookingId,
-            transaction_date: new Date().toISOString(),
-            amount_paid: 0,
-            payment_method: 'Cash',
-            payment_status: 'Pending'
-          }
-        ]);
-
-      if (txError) throw txError;
 
       alert('Reservation Approved successfully!');
       fetchBookings();
@@ -92,59 +163,87 @@ const AdminBookings = () => {
   };
 
   const handlePaidAmountChange = (bookingId, value) => {
-    setEditingValues({
-      ...editingValues,
-      [bookingId]: value
-    });
+    const newValue = value === '' ? 0 : parseFloat(value);
+    setEditingValues(prev => ({
+      ...prev,
+      [bookingId]: isNaN(newValue) ? 0 : newValue
+    }));
   };
 
   const savePaymentUpdate = async (bookingId, totalAmount) => {
     try {
       const numericBookingId = parseInt(bookingId, 10);
-      const newPaidAmount = parseFloat(editingValues[bookingId]) || 0;
+      let newPaidAmount = parseFloat(editingValues[bookingId]);
+      
+      if (isNaN(newPaidAmount) || newPaidAmount < 0) {
+        newPaidAmount = 0;
+      }
+      
       const parsedTotal = parseFloat(totalAmount) || 0;
       let newPaymentStatus = 'Unpaid';
+      let newDownPayment = 0;
+      let newRemainingBalance = parsedTotal - newPaidAmount;
 
       if (newPaidAmount >= parsedTotal) {
         newPaymentStatus = 'Paid';
+        newDownPayment = parsedTotal;
+        newRemainingBalance = 0;
       } else if (newPaidAmount > 0 && newPaidAmount < parsedTotal) {
         newPaymentStatus = 'Downpayment';
+        newDownPayment = newPaidAmount;
+        newRemainingBalance = parsedTotal - newPaidAmount;
       }
+
+      const updateData = {
+        amount_paid: newPaidAmount,
+        payment_status: newPaymentStatus,
+        down_payment: newDownPayment,
+        remaining_balance: newRemainingBalance
+      };
 
       const { error: bookingErr } = await supabase
         .from('bookings')
-        .update({
-          paid_amount: newPaidAmount,
-          payment_status: newPaymentStatus
-        })
+        .update(updateData)
         .eq('booking_id', numericBookingId);
 
       if (bookingErr) throw bookingErr;
-
-      const { data: txRecords, error: txFetchErr } = await supabase
-        .from('transactions')
-        .select('transaction_id')
-        .eq('booking_id', numericBookingId);
-
-      if (txFetchErr) throw txFetchErr;
-
-      if (txRecords && txRecords.length > 0) {
-        const targetTxId = txRecords[0].transaction_id;
-        const { error: txUpdateErr } = await supabase
-          .from('transactions')
-          .update({
-            amount_paid: newPaidAmount,
-            payment_status: newPaymentStatus
-          })
-          .eq('transaction_id', targetTxId);
-        if (txUpdateErr) throw txUpdateErr;
-      }
 
       alert(`Success! Updated Payment details for Booking #${numericBookingId}`);
       fetchBookings();
     } catch (err) {
       console.error("Payment Save Error Detail:", err);
       alert('Error saving payment: ' + err.message);
+    }
+  };
+
+  const clearPayment = async (bookingId) => {
+    try {
+      const numericBookingId = parseInt(bookingId, 10);
+      
+      const updateData = {
+        amount_paid: 0,
+        payment_status: 'Unpaid',
+        down_payment: 0,
+        remaining_balance: 0
+      };
+
+      const { error: bookingErr } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('booking_id', numericBookingId);
+
+      if (bookingErr) throw bookingErr;
+
+      setEditingValues(prev => ({
+        ...prev,
+        [bookingId]: 0
+      }));
+
+      alert(`Payment cleared for Booking #${numericBookingId}`);
+      fetchBookings();
+    } catch (err) {
+      console.error("Clear Payment Error:", err);
+      alert('Error clearing payment: ' + err.message);
     }
   };
 
@@ -155,10 +254,43 @@ const AdminBookings = () => {
     window.open(data.publicUrl, '_blank');
   };
 
+  const getBookingStatusClass = (status) => {
+    if (status === 'Approved' || status === 'APPROVED') {
+      return 'bg-green-100 text-green-700';
+    }
+    if (status === 'Cancelled' || status === 'CANCELLED') {
+      return 'bg-red-100 text-red-700';
+    }
+    return 'bg-amber-100 text-amber-700';
+  };
+
+  const getPaymentStatusClass = (status) => {
+    if (status === 'Paid' || status === 'PAID') {
+      return 'bg-green-100 text-green-700';
+    }
+    if (status === 'Downpayment' || status === 'DOWNPAYMENT') {
+      return 'bg-blue-100 text-blue-700';
+    }
+    return 'bg-red-100 text-red-700';
+  };
+
+  const filteredBookings = bookings.filter(booking => {
+    const searchLower = searchTerm.toLowerCase();
+    const clientName = booking.client_info?.name?.toLowerCase() || '';
+    const clientEmail = booking.client_info?.email?.toLowerCase() || '';
+    const eventName = booking.event_name?.toLowerCase() || '';
+    const bookingIdStr = booking.booking_id?.toString() || '';
+    
+    return clientName.includes(searchLower) ||
+      clientEmail.includes(searchLower) ||
+      eventName.includes(searchLower) ||
+      bookingIdStr.includes(searchLower);
+  });
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">
       <div className="text-xs font-black tracking-widest uppercase animate-pulse text-[#D4AF37]">
-        Fetching Faustino's Records...
+        Loading bookings...
       </div>
     </div>
   );
@@ -178,33 +310,61 @@ const AdminBookings = () => {
         </Link>
       </div>
       
+      <div className="mb-6 flex gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by client name, email, event, or booking ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#B8860B] transition-all"
+          />
+        </div>
+        <div className="text-xs text-slate-400 self-center">
+          Total: {filteredBookings.length} bookings
+        </div>
+      </div>
+
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-black text-white text-[10px] uppercase tracking-[0.2em]">
-                <th className="p-5">Booking ID</th>
+                <th className="p-5">Client Info</th>
                 <th className="p-5">Event Details</th>
                 <th className="p-5">Schedule</th>
                 <th className="p-5">Financials</th>
+                <th className="p-5">Payment Details</th>
                 <th className="p-5">Status</th>
                 <th className="p-5 text-right">Actions</th>
-              </tr>
+               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {bookings.length > 0 ? (
-                bookings.map((b) => (
+              {filteredBookings.length > 0 ? (
+                filteredBookings.map((b) => (
                   <tr key={b.booking_id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-5 font-bold text-slate-800 text-sm">#{b.booking_id}</td>
+                    <td className="p-5">
+                      <div className="flex items-start gap-2">
+                        <User size={14} className="text-slate-400 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-slate-800 text-sm">{b.client_info?.name || 'Unknown'}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{b.client_info?.email || 'No email'}</p>
+                          <p className="text-[9px] text-slate-300 mt-1">ID: #{b.booking_id}</p>
+                        </div>
+                      </div>
+                    </td>
                     
                     <td className="p-5">
                       <div className="flex flex-col">
-                        <span className="text-slate-900 font-bold text-sm">{b.event_type || 'Wedding Package'}</span>
+                        <span className="text-slate-900 font-bold text-sm">{b.event_name}</span>
                         <div className="flex items-center gap-1.5 text-slate-500 mt-1">
                           <Users size={12} className="text-slate-400" />
-                          <span className="text-xs font-semibold">{b.total_pax ?? 0} Pax</span>
+                          <span className="text-xs font-semibold">{b.total_pax || b.pax || 0} Pax</span>
                         </div>
-                        <span className="text-[9px] text-slate-400 font-mono mt-1 max-w-[120px] truncate">{b.user_id}</span>
+                        {b.party_package && b.party_package !== 'NULL' && b.party_package !== null && b.party_package !== 'null' && (
+                          <span className="text-[9px] text-slate-400 font-mono mt-1">Package: {b.party_package}</span>
+                        )}
                       </div>
                     </td>
 
@@ -212,12 +372,12 @@ const AdminBookings = () => {
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2 text-slate-700 text-xs font-semibold">
                           <Calendar size={14} className="text-slate-400" />
-                          {b.appointment_date}
+                          {b.event_date || b.appointment_date || 'TBD'}
                         </div>
                         <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
                           <Clock size={14} className="text-slate-400" />
                           <span>
-                            {b.appointment_time?.substring(0, 5) || '00:00'} 
+                            {(b.appointment_time || b.start_time || '00:00').substring(0, 5)} 
                             {b.end_time ? ` - ${b.end_time.substring(0, 5)}` : ''}
                           </span>
                         </div>
@@ -225,40 +385,72 @@ const AdminBookings = () => {
                     </td>
 
                     <td className="p-5">
-                      <div className="flex flex-col gap-2 max-w-[160px]">
-                        <div className="text-xs text-slate-500 font-bold">Total: ₱{parseFloat(b.amount || 0).toLocaleString()}</div>
+                      <div className="flex flex-col gap-2 max-w-[180px]">
+                        <div className="text-xs text-slate-500 font-bold">Total: ₱{b.total_amount_display.toLocaleString()}</div>
                         <div className="flex items-center gap-1">
-                          <span className="text-xs font-bold text-slate-400">₱</span>
+                          <span className="text-xs font-bold text-slate-400">Paid: ₱</span>
                           <input 
                             type="number"
-                            value={editingValues[b.booking_id] ?? (b.paid_amount || 0)}
+                            value={editingValues[b.booking_id] === 0 ? '' : editingValues[b.booking_id]}
                             onChange={(e) => handlePaidAmountChange(b.booking_id, e.target.value)}
-                            className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs font-bold outline-none focus:border-black"
+                            placeholder="0"
+                            className="w-24 px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs font-bold outline-none focus:border-black"
                           />
                           <button
-                            onClick={() => savePaymentUpdate(b.booking_id, b.amount)}
+                            onClick={() => savePaymentUpdate(b.booking_id, b.amount || b.total_amount)}
                             className="p-1.5 bg-black text-white hover:bg-slate-800 rounded-md transition-colors"
+                            title="Save Payment"
                           >
                             <Save size={12} />
                           </button>
+                          {b.amount_paid_display > 0 && (
+                            <button
+                              onClick={() => clearPayment(b.booking_id)}
+                              className="p-1.5 bg-red-500 text-white hover:bg-red-600 rounded-md transition-colors"
+                              title="Clear Payment"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </td>
 
                     <td className="p-5">
+                      <div className="flex flex-col gap-1">
+                        {b.down_payment_display > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Percent size={12} className="text-[#B8860B]" />
+                            <span className="text-[10px] font-bold text-slate-600">Downpayment:</span>
+                            <span className="text-xs font-black text-[#B8860B]">₱{b.down_payment_display.toLocaleString()}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-400 ml-4">Balance:</span>
+                          <span className={`text-xs font-bold ${b.remaining_balance_display > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            ₱{b.remaining_balance_display.toLocaleString()}
+                          </span>
+                        </div>
+                        {b.payment_method && b.payment_method !== 'NULL' && b.payment_method !== null && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <CreditCard size={10} className="text-slate-400" />
+                            <span className="text-[9px] text-slate-500">{b.payment_method}</span>
+                          </div>
+                        )}
+                        {b.payment_date && (
+                          <div className="text-[8px] text-slate-300">
+                            Paid: {new Date(b.payment_date).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="p-5">
                       <div className="flex flex-col gap-2">
-                        <span className={`w-fit px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                          ['Approved', 'APPROVED'].includes(b.booking_status) ? 'bg-green-100 text-green-700' :
-                          ['Cancelled', 'CANCELLED'].includes(b.booking_status) ? 'bg-red-100 text-red-700' :
-                          'bg-amber-100 text-amber-700'
-                        }`}>
+                        <span className={`w-fit px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getBookingStatusClass(b.booking_status)}`}>
                           {b.booking_status || 'Pending'}
                         </span>
-                        <span className={`w-fit px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                          ['Paid', 'PAID'].includes(b.payment_status) ? 'bg-green-100 text-green-700' :
-                          ['Downpayment', 'DOWNPAYMENT'].includes(b.payment_status) ? 'bg-blue-100 text-blue-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
+                        <span className={`w-fit px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getPaymentStatusClass(b.payment_status)}`}>
                           {b.payment_status || 'Unpaid'}
                         </span>
                         
@@ -275,21 +467,30 @@ const AdminBookings = () => {
 
                     <td className="p-5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {!['Approved', 'APPROVED', 'Cancelled', 'CANCELLED'].includes(b.booking_status) && (
+                        {b.booking_status !== 'Approved' && b.booking_status !== 'APPROVED' && 
+                         b.booking_status !== 'Cancelled' && b.booking_status !== 'CANCELLED' && (
                           <>
                             <button
                               onClick={() => handleApproveBooking(b.booking_id)}
                               className="p-2 bg-slate-50 hover:bg-green-50 text-slate-400 hover:text-green-600 rounded-xl transition-colors"
+                              title="Approve Booking"
                             >
                               <Check size={16} />
                             </button>
                             <button
                               onClick={() => handleCancelBooking(b.booking_id)}
                               className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-colors"
+                              title="Cancel Booking"
                             >
                               <X size={16} />
                             </button>
                           </>
+                        )}
+                        {(b.booking_status === 'Approved' || b.booking_status === 'APPROVED') && (
+                          <span className="text-[9px] text-green-600 font-bold uppercase">Approved</span>
+                        )}
+                        {(b.booking_status === 'Cancelled' || b.booking_status === 'CANCELLED') && (
+                          <span className="text-[9px] text-red-600 font-bold uppercase">Cancelled</span>
                         )}
                       </div>
                     </td>
@@ -297,7 +498,7 @@ const AdminBookings = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="p-10 text-center text-slate-400 text-xs uppercase font-bold tracking-widest">
+                  <td colSpan="7" className="p-10 text-center text-slate-400 text-xs uppercase font-bold tracking-widest">
                     No reservations found
                   </td>
                 </tr>

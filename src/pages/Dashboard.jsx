@@ -9,10 +9,12 @@ import {
   Mic,
   Volume2,
   Keyboard,
+  FileText,
 } from "lucide-react";
 
 import ClientPayment from "../components/ClientPayments";
 import ClientProfile from "../components/ClientProfile";
+import BookingReceipt from "../components/BookingReceipts";
 
 import bapImg from "../assets/BAP.jpg";
 import wedImg from "../assets/WED.jpg";
@@ -24,6 +26,7 @@ const ClientDashboard = () => {
   const [error, setError] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [profileData, setProfileData] = useState(null);
+  const [eventPackages, setEventPackages] = useState([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [myBookings, setMyBookings] = useState([]);
@@ -37,42 +40,14 @@ const ClientDashboard = () => {
   });
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   const [isListening, setIsListening] = useState(false);
   const [focusedElement, setFocusedElement] = useState("");
 
   const recognitionRef = useRef(null);
   const navigate = useNavigate();
-
-  const eventPackages = [
-    {
-      id: 1,
-      title: "Baptismal Package",
-      price: "₱1,500.00",
-      image: bapImg,
-      details:
-        "Exclusive use of venue with elegant thematic design and full dining set-up.",
-      ariaLabel: "Baptismal package, price 1500 pesos",
-    },
-    {
-      id: 2,
-      title: "Wedding Package",
-      price: "₱1,500.00",
-      image: wedImg,
-      details:
-        "Grand wedding celebration with premium styling and red carpet entrance.",
-      ariaLabel: "Wedding package, price 1500 pesos",
-    },
-    {
-      id: 3,
-      title: "Venue Rental",
-      price: "₱450.00",
-      image: venImg,
-      details:
-        "Flexible venue use for various events with full air-conditioning system.",
-      ariaLabel: "Venue rental, price 450 pesos",
-    },
-  ];
 
   const speak = (text) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -103,7 +78,10 @@ const ClientDashboard = () => {
       else if (activeElement.classList.contains("booking-card")) {
         const status = activeElement.querySelector(".booking-status")?.innerText;
         const date = activeElement.querySelector(".booking-date")?.innerText;
-        textToRead = `Booking ${status}, date ${date}. Press Enter to pay.`;
+        textToRead = `Booking ${status}, date ${date}. Press Enter for options.`;
+      }
+      else if (activeElement.classList.contains("view-receipt-btn")) {
+        textToRead = "View Receipt button. Press Enter to see full receipt.";
       }
       else if (activeElement.getAttribute("aria-label")) {
         textToRead = activeElement.getAttribute("aria-label");
@@ -177,6 +155,57 @@ const ClientDashboard = () => {
     setMyBookings(bookingData || []);
   };
 
+  const fetchEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("event_status", "Available")
+        .order("event_id", { ascending: true });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const formattedEvents = data.map(event => {
+          let eventImage = bapImg;
+          
+          if (event.featured_image && event.featured_image !== "" && event.featured_image !== null) {
+            eventImage = event.featured_image;
+          } else {
+            const name = event.event_name.toLowerCase();
+            if (name.includes("wedding")) {
+              eventImage = wedImg;
+            } else if (name.includes("baptismal")) {
+              eventImage = bapImg;
+            } else {
+              eventImage = venImg;
+            }
+          }
+          
+          return {
+            id: event.event_id,
+            title: event.event_name,
+            price: `₱${Number(event.amount_per_pax).toLocaleString()}.00`,
+            price_raw: Number(event.amount_per_pax),
+            image: eventImage,
+            details: event.event_description || `${event.event_name}`,
+            ariaLabel: `${event.event_name} package, price ${event.amount_per_pax} pesos`
+          };
+        });
+        setEventPackages(formattedEvents);
+      } else {
+        setEventPackages([]);
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setEventPackages([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [refreshTrigger]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -237,15 +266,16 @@ const ClientDashboard = () => {
 
   const executeCommand = (command) => {
     console.log("Command:", command);
+    const lowerCommand = command.toLowerCase();
 
-    if (command === "mic" || command === "microphone") {
+    if (lowerCommand === "mic" || lowerCommand === "microphone" || lowerCommand === "microphone button") {
       startVoice();
     }
-    else if (command === "profile") {
+    else if (lowerCommand === "profile" || lowerCommand === "my profile" || lowerCommand === "open profile") {
       setIsProfileModalOpen(true);
       speak("Profile opened");
     }
-    else if (command === "close") {
+    else if (lowerCommand === "close" || lowerCommand === "close modal" || lowerCommand === "close form" || lowerCommand === "cancel") {
       if (isProfileModalOpen) {
         setIsProfileModalOpen(false);
         speak("Profile closed");
@@ -258,11 +288,16 @@ const ClientDashboard = () => {
         setPaymentModal({ open: false, booking: null });
         speak("Payment closed");
       }
+      else if (showReceiptModal) {
+        setShowReceiptModal(false);
+        setSelectedBooking(null);
+        speak("Receipt closed");
+      }
       else {
         speak("Nothing to close");
       }
     }
-    else if (command === "my bookings" || command === "bookings") {
+    else if (lowerCommand === "my bookings" || lowerCommand === "bookings" || lowerCommand === "my reservations") {
       const element = document.getElementById("my-bookings-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -271,22 +306,7 @@ const ClientDashboard = () => {
         speak("No bookings found");
       }
     }
-    else if (command === "baptismal") {
-      setSelectedPackage(eventPackages[0]);
-      setIsModalOpen(true);
-      speak(`${eventPackages[0].title}, ${eventPackages[0].price}`);
-    }
-    else if (command === "wedding") {
-      setSelectedPackage(eventPackages[1]);
-      setIsModalOpen(true);
-      speak(`${eventPackages[1].title}, ${eventPackages[1].price}`);
-    }
-    else if (command === "venue") {
-      setSelectedPackage(eventPackages[2]);
-      setIsModalOpen(true);
-      speak(`${eventPackages[2].title}, ${eventPackages[2].price}`);
-    }
-    else if (command === "pay now") {
+    else if (lowerCommand === "pay now" || lowerCommand === "make payment" || lowerCommand === "pay") {
       if (myBookings.length > 0) {
         setPaymentModal({ open: true, booking: myBookings[0] });
         speak("Payment opened");
@@ -294,7 +314,16 @@ const ClientDashboard = () => {
         speak("No bookings to pay");
       }
     }
-    else if (command === "book this") {
+    else if (lowerCommand === "receipt" || lowerCommand === "view receipt" || lowerCommand === "my receipt") {
+      if (myBookings.length > 0) {
+        setSelectedBooking(myBookings[0]);
+        setShowReceiptModal(true);
+        speak("Receipt opened");
+      } else {
+        speak("No bookings found");
+      }
+    }
+    else if (lowerCommand === "book this" || lowerCommand === "reserve this" || lowerCommand === "book now") {
       if (selectedPackage) {
         speak(`Booking ${selectedPackage.title}`);
         handleBooking(selectedPackage);
@@ -302,36 +331,57 @@ const ClientDashboard = () => {
         speak("Please select a package first");
       }
     }
-    else if (command === "packages") {
-      document.querySelector("section")?.scrollIntoView({ behavior: "smooth" });
-      speak("Showing packages");
+    else if (lowerCommand === "packages" || lowerCommand === "view packages" || lowerCommand === "show packages" || 
+             lowerCommand === "our packages" || lowerCommand === "see packages") {
+      const packagesSection = document.querySelector("section");
+      if (packagesSection) {
+        packagesSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        speak(`Showing ${eventPackages.length} available packages`);
+      } else {
+        speak("Packages section not found");
+      }
     }
-    else if (command === "scroll up") {
+    else if (lowerCommand === "scroll up" || lowerCommand === "up" || lowerCommand === "go up") {
       window.scrollBy({ top: -300, behavior: "smooth" });
       speak("Scrolling up");
     }
-    else if (command === "scroll down") {
+    else if (lowerCommand === "scroll down" || lowerCommand === "down" || lowerCommand === "go down") {
       window.scrollBy({ top: 300, behavior: "smooth" });
       speak("Scrolling down");
     }
-    else if (command === "tab") {
+    else if (lowerCommand === "tab" || lowerCommand === "next") {
       const focusable = document.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
       let currentIndex = Array.from(focusable).findIndex(el => el === document.activeElement);
       let nextIndex = (currentIndex + 1) % focusable.length;
       focusable[nextIndex].focus();
+      speak("Moved to next element");
     }
-    else if (command === "read") {
+    else if (lowerCommand === "read" || lowerCommand === "read this" || lowerCommand === "speak") {
       readFocusedElement();
     }
-    else if (command === "help") {
-      speak("Commands: mic, profile, close, my bookings, baptismal, wedding, venue, pay now, book this, packages, scroll up, scroll down, tab, read, logout");
+    else if (lowerCommand === "help" || lowerCommand === "what can I say" || lowerCommand === "commands") {
+      speak("Commands: mic, profile, close, my bookings, receipt, pay now, book this, packages, scroll up, scroll down, tab, read, logout. You can also say any package name to select it.");
     }
-    else if (command === "logout") {
+    else if (lowerCommand === "logout" || lowerCommand === "sign out" || lowerCommand === "log out") {
       speak("Goodbye");
       setTimeout(() => {
         supabase.auth.signOut();
         navigate("/");
       }, 300);
+    }
+    else {
+      const foundPackage = eventPackages.find(pkg => 
+        pkg.title.toLowerCase().includes(lowerCommand) || 
+        lowerCommand.includes(pkg.title.toLowerCase())
+      );
+      
+      if (foundPackage) {
+        setSelectedPackage(foundPackage);
+        setIsModalOpen(true);
+        speak(`${foundPackage.title}, ${foundPackage.price}`);
+      } else {
+        speak("Command not recognized. Say help for list of commands.");
+      }
     }
   };
 
@@ -353,8 +403,9 @@ const ClientDashboard = () => {
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = "en-US";
+    recognition.maxAlternatives = 5;
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -362,14 +413,34 @@ const ClientDashboard = () => {
     };
 
     recognition.onresult = (event) => {
-      const command = event.results[0][0].transcript.toLowerCase().trim();
-      executeCommand(command);
+      let command = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          command = event.results[i][0].transcript.toLowerCase().trim();
+          break;
+        }
+      }
+      
+      if (command) {
+        console.log("Recognized:", command);
+        executeCommand(command);
+      } else if (event.results[0]) {
+        const alternative = event.results[0][0].transcript.toLowerCase().trim();
+        console.log("Alternative:", alternative);
+        executeCommand(alternative);
+      }
+      
       recognition.stop();
       setIsListening(false);
     };
 
     recognition.onerror = (event) => {
       console.log("Error:", event.error);
+      if (event.error === 'no-speech') {
+        speak("I didn't hear anything. Please try again.");
+      } else if (event.error === 'not-allowed') {
+        speak("Microphone access denied. Please allow microphone access.");
+      }
       setIsListening(false);
     };
 
@@ -394,6 +465,9 @@ const ClientDashboard = () => {
         state: {
           selectedType: pkg.title,
           price: pkg.price,
+          price_raw: pkg.price_raw,
+          event_id: pkg.id,
+          party_package: pkg.title
         },
       });
     }
@@ -546,61 +620,70 @@ const ClientDashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {eventPackages
-              .filter((pkg) =>
-                pkg.title
-                  .toLowerCase()
-                  .includes(searchQuery.toLowerCase())
-              )
-              .map((pkg) => (
-                <div
-                  key={pkg.id}
-                  className="package-card bg-white rounded-[2rem] border border-slate-100 p-8 flex flex-col shadow-sm cursor-pointer"
-                  tabIndex={0}
-                  aria-label={pkg.ariaLabel}
-                  onClick={() => {
-                    setSelectedPackage(pkg);
-                    setIsModalOpen(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+            {eventPackages.length > 0 ? (
+              eventPackages
+                .filter((pkg) =>
+                  pkg.title
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase())
+                )
+                .map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="package-card bg-white rounded-[2rem] border border-slate-100 p-8 flex flex-col shadow-sm cursor-pointer"
+                    tabIndex={0}
+                    aria-label={pkg.ariaLabel}
+                    onClick={() => {
                       setSelectedPackage(pkg);
                       setIsModalOpen(true);
-                    }
-                  }}
-                >
-                  <img
-                    src={pkg.image}
-                    alt={pkg.title}
-                    className="h-64 w-full object-cover rounded-2xl mb-6"
-                  />
-
-                  <h3 className="package-title text-xl font-black uppercase mb-3">
-                    {pkg.title}
-                  </h3>
-
-                  <p className="text-slate-400 text-[10px] font-bold uppercase mb-8 flex-1">
-                    {pkg.details}
-                  </p>
-
-                  <div className="flex items-center justify-between pt-6 border-t border-slate-50">
-                    <span className="package-price text-[#B8860B] font-black text-xl">
-                      {pkg.price}
-                    </span>
-
-                    <button
-                      onClick={() => {
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
                         setSelectedPackage(pkg);
                         setIsModalOpen(true);
+                      }
+                    }}
+                  >
+                    <img
+                      src={pkg.image}
+                      alt={pkg.title}
+                      className="h-64 w-full object-cover rounded-2xl mb-6"
+                      onError={(e) => {
+                        e.target.src = bapImg;
                       }}
-                      className="p-3 bg-black text-white rounded-xl hover:bg-[#B8860B] transition-all"
-                      aria-label={`View ${pkg.title} details`}
-                    >
-                      <ArrowRight size={18} />
-                    </button>
+                    />
+
+                    <h3 className="package-title text-xl font-black uppercase mb-3">
+                      {pkg.title}
+                    </h3>
+
+                    <p className="text-slate-400 text-[10px] font-bold uppercase mb-8 flex-1">
+                      {pkg.details}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-6 border-t border-slate-50">
+                      <span className="package-price text-[#B8860B] font-black text-xl">
+                        {pkg.price}
+                      </span>
+
+                      <button
+                        onClick={() => {
+                          setSelectedPackage(pkg);
+                          setIsModalOpen(true);
+                        }}
+                        className="p-3 bg-black text-white rounded-xl hover:bg-[#B8860B] transition-all"
+                        aria-label={`View ${pkg.title} details`}
+                      >
+                        <ArrowRight size={18} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+            ) : (
+              <div className="col-span-3 text-center py-20">
+                <p className="text-slate-400 text-sm">No available packages at the moment.</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -616,12 +699,14 @@ const ClientDashboard = () => {
                   key={item.booking_id}
                   className="booking-card bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm"
                   tabIndex={0}
-                  aria-label={`Booking ${item.booking_status}, date ${new Date(item.event_date).toLocaleDateString()}. Press Enter to pay.`}
+                  aria-label={`Booking ${item.booking_status}, date ${new Date(item.event_date).toLocaleDateString()}`}
                 >
                   <div
                     className={`booking-status px-5 py-2 text-[8px] font-black uppercase ${
                       item.booking_status === "Approved"
                         ? "bg-green-500"
+                        : item.booking_status === "Pending"
+                        ? "bg-yellow-500"
                         : "bg-orange-400"
                     } text-white inline-block mb-4`}
                   >
@@ -633,29 +718,55 @@ const ClientDashboard = () => {
                   </h4>
 
                   <div className="flex items-center gap-4 mt-4">
-                    <Clock
-                      size={14}
-                      className="text-slate-400"
-                    />
+                    <Clock size={14} className="text-slate-400" />
                     <span className="text-[10px] font-bold uppercase">
                       {item.appointment_time} - {item.end_time}
                     </span>
                   </div>
 
-                  {item.payment_status === "Unpaid" && (
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                    <div>
+                      <p className="text-[9px] text-slate-400">Total Amount</p>
+                      <p className="font-black text-[#B8860B]">₱{item.amount?.toLocaleString() || 0}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] text-slate-400">Payment Status</p>
+                      <p className={`font-bold text-xs ${
+                        item.payment_status === "Paid" ? "text-green-600" :
+                        item.payment_status === "Partial" ? "text-yellow-600" : "text-red-600"
+                      }`}>
+                        {item.payment_status || "Pending"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-4">
                     <button
-                      onClick={() =>
-                        setPaymentModal({
-                          open: true,
-                          booking: item,
-                        })
-                      }
-                      className="mt-4 text-[9px] font-black text-[#B8860B] uppercase"
-                      aria-label={`Pay for booking on ${new Date(item.event_date).toLocaleDateString()}`}
+                      onClick={() => {
+                        setSelectedBooking(item);
+                        setShowReceiptModal(true);
+                      }}
+                      className="view-receipt-btn flex-1 bg-[#B8860B] text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-[#9a7009] transition-all flex items-center justify-center gap-1"
+                      aria-label="View receipt"
                     >
-                      PAY NOW
+                      <FileText size={12} />
+                      View Receipt
                     </button>
-                  )}
+                    {item.payment_status !== "Paid" && (
+                      <button
+                        onClick={() =>
+                          setPaymentModal({
+                            open: true,
+                            booking: item,
+                          })
+                        }
+                        className="flex-1 bg-black text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-gray-800 transition-all"
+                        aria-label={`Pay for booking on ${new Date(item.event_date).toLocaleDateString()}`}
+                      >
+                        Pay Now
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -671,6 +782,18 @@ const ClientDashboard = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <ClientProfile 
             onClose={handleProfileClose}
+          />
+        </div>
+      )}
+
+      {showReceiptModal && selectedBooking && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+          <BookingReceipt 
+            booking={selectedBooking}
+            onClose={() => {
+              setShowReceiptModal(false);
+              setSelectedBooking(null);
+            }}
           />
         </div>
       )}
