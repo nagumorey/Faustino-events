@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
-import { Check, X, Calendar, Clock, Users, Save, FileImage, User, Search, Percent, CreditCard, Trash2 } from 'lucide-react';
+import { Check, X, Calendar, Clock, Users, Save, FileImage, User, Search, Percent, CreditCard, Trash2, PlusCircle } from 'lucide-react';
 
 const AdminBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingValues, setEditingValues] = useState({});
+  const [additionalPayment, setAdditionalPayment] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchBookings = useCallback(async () => {
@@ -78,7 +78,7 @@ const AdminBookings = () => {
           finalEventName = b.event_name;
         }
         
-        const totalAmount = parseFloat(b.amount || b.total_amount || 0);
+        const totalAmount = parseFloat(b.total_amount || b.amount || 0);
         const paidAmt = parseFloat(b.amount_paid || 0);
         const downAmt = parseFloat(b.down_payment || 0);
         const remainingBal = parseFloat(b.remaining_balance || (totalAmount - paidAmt) || 0);
@@ -111,11 +111,11 @@ const AdminBookings = () => {
       
       setBookings(enrichedBookings);
       
-      const initialInputs = {};
+      const initialPayments = {};
       enrichedBookings.forEach(b => {
-        initialInputs[b.booking_id] = b.amount_paid_display || 0;
+        initialPayments[b.booking_id] = '';
       });
-      setEditingValues(initialInputs);
+      setAdditionalPayment(initialPayments);
       
     } catch (err) {
       console.error("Fetch Error:", err);
@@ -162,43 +162,45 @@ const AdminBookings = () => {
     }
   };
 
-  const handlePaidAmountChange = (bookingId, value) => {
-    const newValue = value === '' ? 0 : parseFloat(value);
-    setEditingValues(prev => ({
+  const handleAdditionalPaymentChange = (bookingId, value) => {
+    const newValue = value === '' ? '' : parseFloat(value);
+    setAdditionalPayment(prev => ({
       ...prev,
-      [bookingId]: isNaN(newValue) ? 0 : newValue
+      [bookingId]: isNaN(newValue) ? '' : newValue
     }));
   };
 
-  const savePaymentUpdate = async (bookingId, totalAmount) => {
+  const addPayment = async (bookingId, totalAmount, currentPaidAmount, currentDownPayment) => {
     try {
       const numericBookingId = parseInt(bookingId, 10);
-      let newPaidAmount = parseFloat(editingValues[bookingId]);
+      const addAmount = parseFloat(additionalPayment[bookingId]);
       
-      if (isNaN(newPaidAmount) || newPaidAmount < 0) {
-        newPaidAmount = 0;
+      if (isNaN(addAmount) || addAmount <= 0) {
+        alert('Please enter a valid payment amount');
+        return;
       }
       
       const parsedTotal = parseFloat(totalAmount) || 0;
-      let newPaymentStatus = 'Unpaid';
-      let newDownPayment = 0;
+      const newPaidAmount = currentPaidAmount + addAmount;
+      
+      let newPaymentStatus = 'Downpayment';
+      let newDownPayment = currentDownPayment;
       let newRemainingBalance = parsedTotal - newPaidAmount;
-
+      
       if (newPaidAmount >= parsedTotal) {
         newPaymentStatus = 'Paid';
-        newDownPayment = parsedTotal;
         newRemainingBalance = 0;
-      } else if (newPaidAmount > 0 && newPaidAmount < parsedTotal) {
-        newPaymentStatus = 'Downpayment';
-        newDownPayment = newPaidAmount;
-        newRemainingBalance = parsedTotal - newPaidAmount;
+      }
+      
+      if (newDownPayment === 0 && addAmount > 0 && newPaidAmount < parsedTotal) {
+        newDownPayment = addAmount;
       }
 
       const updateData = {
         amount_paid: newPaidAmount,
         payment_status: newPaymentStatus,
         down_payment: newDownPayment,
-        remaining_balance: newRemainingBalance
+        remaining_balance: newRemainingBalance > 0 ? newRemainingBalance : 0
       };
 
       const { error: bookingErr } = await supabase
@@ -208,15 +210,22 @@ const AdminBookings = () => {
 
       if (bookingErr) throw bookingErr;
 
-      alert(`Success! Updated Payment details for Booking #${numericBookingId}`);
+      setAdditionalPayment(prev => ({
+        ...prev,
+        [bookingId]: ''
+      }));
+
+      alert(`Success! Added ₱${addAmount.toLocaleString()} to Booking #${numericBookingId}`);
       fetchBookings();
     } catch (err) {
-      console.error("Payment Save Error Detail:", err);
-      alert('Error saving payment: ' + err.message);
+      console.error("Payment Add Error:", err);
+      alert('Error adding payment: ' + err.message);
     }
   };
 
-  const clearPayment = async (bookingId) => {
+  const clearPayment = async (bookingId, totalAmount) => {
+    if (!window.confirm('Are you sure you want to clear all payments? This cannot be undone.')) return;
+    
     try {
       const numericBookingId = parseInt(bookingId, 10);
       
@@ -224,7 +233,7 @@ const AdminBookings = () => {
         amount_paid: 0,
         payment_status: 'Unpaid',
         down_payment: 0,
-        remaining_balance: 0
+        remaining_balance: parseFloat(totalAmount) || 0
       };
 
       const { error: bookingErr } = await supabase
@@ -234,9 +243,9 @@ const AdminBookings = () => {
 
       if (bookingErr) throw bookingErr;
 
-      setEditingValues(prev => ({
+      setAdditionalPayment(prev => ({
         ...prev,
-        [bookingId]: 0
+        [bookingId]: ''
       }));
 
       alert(`Payment cleared for Booking #${numericBookingId}`);
@@ -385,31 +394,40 @@ const AdminBookings = () => {
                     </td>
 
                     <td className="p-5">
-                      <div className="flex flex-col gap-2 max-w-[180px]">
-                        <div className="text-xs text-slate-500 font-bold">Total: ₱{b.total_amount_display.toLocaleString()}</div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-bold text-slate-400">Paid: ₱</span>
-                          <input 
-                            type="number"
-                            value={editingValues[b.booking_id] === 0 ? '' : editingValues[b.booking_id]}
-                            onChange={(e) => handlePaidAmountChange(b.booking_id, e.target.value)}
-                            placeholder="0"
-                            className="w-24 px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs font-bold outline-none focus:border-black"
-                          />
+                      <div className="flex flex-col gap-2 max-w-[200px]">
+                        <div className="text-xs font-bold">
+                          <span className="text-slate-500">Total: </span>
+                          <span className="text-slate-900">₱{b.total_amount_display.toLocaleString()}</span>
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-slate-500">Paid: </span>
+                          <span className="font-bold text-green-600">₱{b.amount_paid_display.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="relative flex-1">
+                            <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-[10px] text-slate-400">₱</span>
+                            <input 
+                              type="number"
+                              value={additionalPayment[b.booking_id] === '' ? '' : additionalPayment[b.booking_id]}
+                              onChange={(e) => handleAdditionalPaymentChange(b.booking_id, e.target.value)}
+                              placeholder="Add payment"
+                              className="w-full pl-5 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-[#B8860B]"
+                            />
+                          </div>
                           <button
-                            onClick={() => savePaymentUpdate(b.booking_id, b.amount || b.total_amount)}
-                            className="p-1.5 bg-black text-white hover:bg-slate-800 rounded-md transition-colors"
-                            title="Save Payment"
+                            onClick={() => addPayment(b.booking_id, b.total_amount_display, b.amount_paid_display, b.down_payment_display)}
+                            className="p-1.5 bg-[#B8860B] text-white hover:bg-[#9a7009] rounded-lg transition-colors"
+                            title="Add Payment"
                           >
-                            <Save size={12} />
+                            <PlusCircle size={14} />
                           </button>
                           {b.amount_paid_display > 0 && (
                             <button
-                              onClick={() => clearPayment(b.booking_id)}
-                              className="p-1.5 bg-red-500 text-white hover:bg-red-600 rounded-md transition-colors"
-                              title="Clear Payment"
+                              onClick={() => clearPayment(b.booking_id, b.total_amount_display)}
+                              className="p-1.5 bg-red-500 text-white hover:bg-red-600 rounded-lg transition-colors"
+                              title="Clear All Payments"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={14} />
                             </button>
                           )}
                         </div>
@@ -451,7 +469,7 @@ const AdminBookings = () => {
                           {b.booking_status || 'Pending'}
                         </span>
                         <span className={`w-fit px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getPaymentStatusClass(b.payment_status)}`}>
-                          {b.payment_status || 'Unpaid'}
+                          {b.payment_status === 'Paid' ? 'PAID' : b.payment_status === 'Downpayment' ? 'DOWNPAYMENT' : 'UNPAID'}
                         </span>
                         
                         {b.transactions?.[0]?.proof_of_payment && (
@@ -494,7 +512,7 @@ const AdminBookings = () => {
                         )}
                       </div>
                     </td>
-                  </tr>
+                   </tr>
                 ))
               ) : (
                 <tr>

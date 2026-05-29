@@ -56,7 +56,9 @@ const AdminDashboard = () => {
         event_type,
         event_name,
         event_date,
+        appointment_date,
         appointment_time,
+        start_time,
         end_time,
         total_pax,
         booking_status,
@@ -104,10 +106,6 @@ const AdminDashboard = () => {
   };
 
   const fetchCompletedBookings = async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
-    
     const { data, error } = await supabase
       .from("bookings")
       .select(`
@@ -115,7 +113,9 @@ const AdminDashboard = () => {
         event_type,
         event_name,
         event_date,
+        appointment_date,
         appointment_time,
+        start_time,
         end_time,
         total_pax,
         booking_status,
@@ -556,8 +556,8 @@ const AdminDashboard = () => {
                         {hasBookings && (
                           <div className="mt-2 space-y-1">
                             {bookingsOnDay.slice(0, 2).map((booking, bIdx) => (
-                              <div key={bIdx} className="text-[9px] font-medium text-slate-600 truncate" title={`${booking.client_first_name} ${booking.client_last_name} - ${booking.appointment_time}`}>
-                                {booking.appointment_time?.substring(0,5)} {booking.client_first_name}
+                              <div key={bIdx} className="text-[9px] font-medium text-slate-600 truncate" title={`${booking.client_first_name} ${booking.client_last_name} - ${booking.start_time || booking.appointment_time}`}>
+                                {(booking.start_time || booking.appointment_time)?.substring(0,5)} {booking.client_first_name}
                               </div>
                             ))}
                             {bookingsOnDay.length > 2 && (
@@ -623,7 +623,7 @@ const AdminDashboard = () => {
                 {(showArchived ? completedBookings : approvedBookings).slice(0, 10).map((booking) => (
                   <tr key={booking.booking_id} className="hover:bg-slate-50/50 transition-colors text-sm">
                     <td className="px-6 py-3 font-mono text-xs">{booking.event_date}</td>
-                    <td className="px-6 py-3 text-xs">{booking.appointment_time?.substring(0,5)} - {booking.end_time?.substring(0,5)}</td>
+                    <td className="px-6 py-3 text-xs">{(booking.start_time || booking.appointment_time)?.substring(0,5)} - {booking.end_time?.substring(0,5)}</td>
                     <td className="px-6 py-3">
                       <div>
                         <p className="font-medium text-slate-800">{booking.client_first_name} {booking.client_last_name}</p>

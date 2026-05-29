@@ -42,6 +42,15 @@ const BookingReceipt = ({ booking, onClose }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
+    
+    if (dateString.includes('-')) {
+      const [year, month, day] = dateString.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+      }
+    }
+    
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
     return date.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -49,15 +58,21 @@ const BookingReceipt = ({ booking, onClose }) => {
 
   const formatTime = (timeString) => {
     if (!timeString) return 'N/A';
-    return timeString.substring(0, 5);
+    if (timeString.includes(':')) {
+      return timeString.substring(0, 5);
+    }
+    return timeString;
   };
 
-  const subtotal = parseFloat(booking?.amount || booking?.total_amount || 0);
-  const amountPaid = parseFloat(booking?.amount_paid || booking?.paid_amount || 0);
-  const downPayment = parseFloat(booking?.down_payment || amountPaid || 0);
+  const subtotal = parseFloat(booking?.total_amount || booking?.amount || 0);
+  const amountPaid = parseFloat(booking?.amount_paid || 0);
+  const downPayment = parseFloat(booking?.down_payment || 0);
   const remainingBalance = parseFloat(booking?.remaining_balance || (subtotal - amountPaid) || 0);
-  const isFullyPaid = amountPaid >= subtotal && subtotal > 0;
-  const isPartialPaid = amountPaid > 0 && amountPaid < subtotal;
+  const isFullyPaid = booking?.payment_status === 'Paid';
+  const isPartialPaid = booking?.payment_status === 'Partial' || booking?.payment_status === 'Downpayment';
+
+  const eventStartTime = booking?.start_time;
+  const eventEndTime = booking?.end_time;
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
@@ -130,12 +145,23 @@ const BookingReceipt = ({ booking, onClose }) => {
                   <p style={{ fontWeight: 'bold', fontSize: '11px', color: '#1e293b', margin: 0 }}>{formatDate(booking?.event_date)}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#94a3b8', letterSpacing: '1px', marginBottom: '3px' }}>TIME</p>
-                  <p style={{ fontWeight: 'bold', fontSize: '11px', color: '#1e293b', margin: 0 }}>{formatTime(booking?.appointment_time)} - {formatTime(booking?.end_time)}</p>
+                  <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#94a3b8', letterSpacing: '1px', marginBottom: '3px' }}>EVENT TIME</p>
+                  <p style={{ fontWeight: 'bold', fontSize: '11px', color: '#1e293b', margin: 0 }}>{formatTime(eventStartTime)} - {formatTime(eventEndTime)}</p>
                 </div>
                 <div>
                   <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#94a3b8', letterSpacing: '1px', marginBottom: '3px' }}>TOTAL GUESTS</p>
-                  <p style={{ fontWeight: 'bold', fontSize: '11px', color: '#1e293b', margin: 0 }}>{booking?.total_pax || booking?.pax || 0} Pax</p>
+                  <p style={{ fontWeight: 'bold', fontSize: '11px', color: '#1e293b', margin: 0 }}>{booking?.total_pax || 0} Pax</p>
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed #e5e7eb' }}>
+                <div>
+                  <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#94a3b8', letterSpacing: '1px', marginBottom: '3px' }}>APPOINTMENT DATE</p>
+                  <p style={{ fontWeight: 'bold', fontSize: '11px', color: '#B8860B', margin: 0 }}>{formatDate(booking?.appointment_date)}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#94a3b8', letterSpacing: '1px', marginBottom: '3px' }}>APPOINTMENT TIME</p>
+                  <p style={{ fontWeight: 'bold', fontSize: '11px', color: '#B8860B', margin: 0 }}>{formatTime(booking?.appointment_time)}</p>
                 </div>
               </div>
             </div>
@@ -148,10 +174,12 @@ const BookingReceipt = ({ booking, onClose }) => {
                 <span style={{ color: '#6b7280', fontSize: '11px' }}>Subtotal</span>
                 <span style={{ fontWeight: 'bold', color: '#1e293b' }}>₱{subtotal.toLocaleString()}.00</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #fde68a' }}>
-                <span style={{ color: '#6b7280', fontSize: '11px' }}>Down Payment</span>
-                <span style={{ fontWeight: 'bold', color: '#B8860B' }}>₱{downPayment.toLocaleString()}.00</span>
-              </div>
+              {downPayment > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #fde68a' }}>
+                  <span style={{ color: '#6b7280', fontSize: '11px' }}>Down Payment</span>
+                  <span style={{ fontWeight: 'bold', color: '#B8860B' }}>₱{downPayment.toLocaleString()}.00</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0 0' }}>
                 <span style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '12px' }}>Total Amount</span>
                 <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#B8860B' }}>₱{subtotal.toLocaleString()}.00</span>
@@ -172,7 +200,7 @@ const BookingReceipt = ({ booking, onClose }) => {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#9ca3af', letterSpacing: '1px', margin: '0 0 3px 0' }}>PAYMENT STATUS</p>
-                  <p style={{ fontSize: '11px', fontWeight: 'bold', color: isFullyPaid ? '#16a34a' : isPartialPaid ? '#2563eb' : '#dc2626', margin: 0 }}>
+                  <p style={{ fontSize: '11px', fontWeight: 'bold', color: isFullyPaid ? '#16a34a' : isPartialPaid ? '#B8860B' : '#dc2626', margin: 0 }}>
                     {isFullyPaid ? 'FULLY PAID' : isPartialPaid ? 'PARTIAL PAYMENT' : 'PENDING'}
                   </p>
                 </div>
