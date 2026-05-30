@@ -182,6 +182,14 @@ const BookNow = () => {
     return occupiedAppointmentSlots[key] === true;
   };
 
+  const isAppointmentTimePassed = (date, time) => {
+    if (!date || !time) return false;
+    const dateStr = formatDateToYMD(date);
+    const appointmentDateTime = new Date(`${dateStr}T${time}:00`);
+    const now = new Date();
+    return appointmentDateTime < now;
+  };
+
   const resetForm = () => {
     setFormData({
       event_date: null,
@@ -293,6 +301,12 @@ const BookNow = () => {
 
       if (hasEventOnDate(formData.appointment_date)) {
         setAlertMessage("Cannot select appointment on a date with an existing event. Please choose another date.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (isAppointmentTimePassed(formData.appointment_date, formData.appointment_time)) {
+        setAlertMessage("Cannot select an appointment time that has already passed. Please choose a future time.");
         setIsSubmitting(false);
         return;
       }
@@ -620,6 +634,13 @@ const BookNow = () => {
           z-index: 10;
           font-weight: normal;
         }
+        .react-datepicker__day--time-passed {
+          background-color: #f3f4f6 !important;
+          color: #9ca3af !important;
+          text-decoration: line-through !important;
+          cursor: not-allowed !important;
+          opacity: 0.6 !important;
+        }
       `}</style>
 
       {alertMessage && (
@@ -930,13 +951,18 @@ const BookNow = () => {
                       <option value="">Select appointment time</option>
                       {appointmentTimeOptions.map(option => {
                         const isFull = isAppointmentSlotFull(formData.appointment_date, option.value);
+                        const isPassed = isAppointmentTimePassed(formData.appointment_date, option.value);
+                        const isDisabled = isFull || isPassed;
+                        let label = option.label;
+                        if (isFull) label += " (FULL)";
+                        if (isPassed) label += " (TIME PASSED)";
                         return (
                           <option 
                             key={option.value} 
                             value={option.value}
-                            disabled={isFull}
+                            disabled={isDisabled}
                           >
-                            {option.label} {isFull ? "(FULL)" : ""}
+                            {label}
                           </option>
                         );
                       })}
