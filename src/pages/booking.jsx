@@ -54,6 +54,23 @@ const BookNow = () => {
     return `${year}-${month}-${day}`;
   }, []);
 
+  const isAppointmentDateInRange = (appointmentDate, eventDate) => {
+    if (!appointmentDate || !eventDate) return false;
+    
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const maxAppointmentDate = new Date(eventDate);
+    maxAppointmentDate.setDate(maxAppointmentDate.getDate() - 3);
+    maxAppointmentDate.setHours(0, 0, 0, 0);
+    
+    const appointmentDateTime = new Date(appointmentDate);
+    appointmentDateTime.setHours(0, 0, 0, 0);
+    
+    return appointmentDateTime >= tomorrow && appointmentDateTime <= maxAppointmentDate;
+  };
+
   const fetchData = useCallback(async () => {
     if (!event_id) return;
     
@@ -259,6 +276,13 @@ const BookNow = () => {
         return;
       }
 
+      const totalPax = parseInt(formData.total_pax);
+      if (isNaN(totalPax) || totalPax < 50) {
+        setAlertMessage("Total guests must be at least 50 Pax.");
+        setIsSubmitting(false);
+        return;
+      }
+
       const eventDateStr = formatDateToYMD(formData.event_date);
       const appointmentDateStr = formatDateToYMD(formData.appointment_date);
       
@@ -283,6 +307,12 @@ const BookNow = () => {
       
       if (appointmentDateTime >= eventDateTime) {
         setAlertMessage("Appointment date must be before the event date.");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (!isAppointmentDateInRange(formData.appointment_date, formData.event_date)) {
+        setAlertMessage("Appointment date must be from TOMORROW up to 3 DAYS BEFORE the event date.");
         setIsSubmitting(false);
         return;
       }
@@ -402,7 +432,7 @@ const BookNow = () => {
         appointment_time: formData.appointment_time,
         start_time: formattedStartTime,
         end_time: formattedEndTime,
-        total_pax: parseInt(formData.total_pax) || 0,
+        total_pax: totalPax,
         amount: finalEventPrice,
         total_amount: finalEventPrice,
         price: finalEventPrice,
@@ -637,6 +667,13 @@ const BookNow = () => {
         .react-datepicker__day--time-passed {
           background-color: #f3f4f6 !important;
           color: #9ca3af !important;
+          text-decoration: line-through !important;
+          cursor: not-allowed !important;
+          opacity: 0.6 !important;
+        }
+        .react-datepicker__day--out-of-range {
+          background-color: #fee2e2 !important;
+          color: #dc2626 !important;
           text-decoration: line-through !important;
           cursor: not-allowed !important;
           opacity: 0.6 !important;
@@ -898,24 +935,31 @@ const BookNow = () => {
                           setAlertMessage("Warning: Appointment date should be BEFORE the event date. Please adjust your appointment.");
                           setTimeout(() => setAlertMessage(null), 3000);
                         }
+                        if (date && formData.event_date && !isAppointmentDateInRange(date, formData.event_date)) {
+                          setAlertMessage("Appointment date must be from TOMORROW up to 3 DAYS BEFORE the event date.");
+                          setTimeout(() => setAlertMessage(null), 3000);
+                        }
                       }}
                       placeholderText="Select appointment date"
                       className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all"
                       dateFormat="MMMM d, yyyy"
                       required
                       filterDate={(date) => {
-                        return !hasEventOnDate(date);
+                        if (hasEventOnDate(date)) return false;
+                        if (!formData.event_date) return true;
+                        return isAppointmentDateInRange(date, formData.event_date);
                       }}
                       dayClassName={(date) => {
                         const dateStr = formatDateToYMD(date);
                         if (hasEventOnDate(date)) return "react-datepicker__day--event-date-appointment";
                         if (fullAppointmentDates.includes(dateStr)) return "react-datepicker__day--appointment-full";
+                        if (formData.event_date && !isAppointmentDateInRange(date, formData.event_date)) return "react-datepicker__day--out-of-range";
                         return "";
                       }}
                     />
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                   </div>
-                  <p className="text-[8px] text-slate-400 mt-1">Brown: Cannot appoint (event exists or full slots) | Blue: Has event (but can appoint if slot available)</p>
+                  <p className="text-[8px] text-slate-400 mt-1">Brown: Cannot appoint (event exists or full slots) | Light Red: Out of range (must be from TOMORROW to 3 DAYS BEFORE event)</p>
                   {formData.appointment_date && formData.event_date && formData.appointment_date >= formData.event_date && (
                     <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 flex items-center gap-2">
                       <AlertTriangle size={12} />
@@ -926,6 +970,12 @@ const BookNow = () => {
                     <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 flex items-center gap-2">
                       <AlertTriangle size={12} />
                       ERROR: Cannot appoint on a date with an existing event! Please select another date.
+                    </div>
+                  )}
+                  {formData.appointment_date && formData.event_date && !isAppointmentDateInRange(formData.appointment_date, formData.event_date) && (
+                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 flex items-center gap-2">
+                      <AlertTriangle size={12} />
+                      ERROR: Appointment date must be from TOMORROW up to 3 DAYS BEFORE the event date!
                     </div>
                   )}
                   {formData.appointment_date && fullAppointmentDates.includes(formatDateToYMD(formData.appointment_date)) && (
@@ -977,14 +1027,15 @@ const BookNow = () => {
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                     <input 
                       type="number" 
-                      min="1"
+                      min="50"
                       required
-                      placeholder="0"
+                      placeholder="50"
                       value={formData.total_pax}
                       onChange={(e) => setFormData({...formData, total_pax: e.target.value})}
                       className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all"
                     />
                   </div>
+                  <p className="text-[8px] text-slate-400 mt-1">Minimum 50 Pax required</p>
                 </div>
               </div>
 

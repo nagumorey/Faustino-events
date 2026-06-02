@@ -10,6 +10,8 @@ import {
   Volume2,
   Keyboard,
   FileText,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import ClientPayment from "../components/ClientPayments";
@@ -33,6 +35,7 @@ const ClientDashboard = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const [paymentModal, setPaymentModal] = useState({
     open: false,
@@ -157,21 +160,41 @@ const ClientDashboard = () => {
 
   const fetchEvents = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: events, error } = await supabase
         .from("events")
-        .select("*")
+        .select(`
+          *,
+          event_images (
+            image_id,
+            image_url,
+            is_cover,
+            display_order
+          )
+        `)
         .eq("event_status", "Available")
         .order("event_id", { ascending: true });
       
       if (error) throw error;
       
-      if (data && data.length > 0) {
-        const formattedEvents = data.map(event => {
-          let eventImage = bapImg;
+      if (events && events.length > 0) {
+        const formattedEvents = events.map(event => {
+          let coverImage = null;
+          let allImages = [];
           
-          if (event.featured_image && event.featured_image !== "" && event.featured_image !== null) {
-            eventImage = event.featured_image;
-          } else {
+          if (event.event_images && event.event_images.length > 0) {
+            allImages = event.event_images.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+            
+            const coverImg = allImages.find(img => img.is_cover === true);
+            if (coverImg) {
+              coverImage = coverImg.image_url;
+            } else {
+              coverImage = allImages[0]?.image_url;
+            }
+          }
+          
+          let eventImage = coverImage;
+          
+          if (!eventImage) {
             const name = event.event_name.toLowerCase();
             if (name.includes("wedding")) {
               eventImage = wedImg;
@@ -188,6 +211,7 @@ const ClientDashboard = () => {
             price: `₱${Number(event.amount_per_pax).toLocaleString()}.00`,
             price_raw: Number(event.amount_per_pax),
             image: eventImage,
+            all_images: allImages,
             details: event.event_description || `${event.event_name}`,
             ariaLabel: `${event.event_name} package, price ${event.amount_per_pax} pesos`
           };
@@ -282,6 +306,7 @@ const ClientDashboard = () => {
       }
       else if (isModalOpen) {
         setIsModalOpen(false);
+        setCurrentImageIndex(0);
         speak("Package closed");
       }
       else if (paymentModal.open) {
@@ -377,6 +402,7 @@ const ClientDashboard = () => {
       
       if (foundPackage) {
         setSelectedPackage(foundPackage);
+        setCurrentImageIndex(0);
         setIsModalOpen(true);
         speak(`${foundPackage.title}, ${foundPackage.price}`);
       } else {
@@ -483,6 +509,18 @@ const ClientDashboard = () => {
     
     await loadUserData();
     setRefreshTrigger(prev => prev + 1);
+  };
+
+  const nextImage = () => {
+    if (selectedPackage && selectedPackage.all_images && selectedPackage.all_images.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % selectedPackage.all_images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (selectedPackage && selectedPackage.all_images && selectedPackage.all_images.length > 0) {
+      setCurrentImageIndex((prev) => (prev - 1 + selectedPackage.all_images.length) % selectedPackage.all_images.length);
+    }
   };
 
   if (loading) {
@@ -635,11 +673,13 @@ const ClientDashboard = () => {
                     aria-label={pkg.ariaLabel}
                     onClick={() => {
                       setSelectedPackage(pkg);
+                      setCurrentImageIndex(0);
                       setIsModalOpen(true);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         setSelectedPackage(pkg);
+                        setCurrentImageIndex(0);
                         setIsModalOpen(true);
                       }
                     }}
@@ -649,7 +689,14 @@ const ClientDashboard = () => {
                       alt={pkg.title}
                       className="h-64 w-full object-cover rounded-2xl mb-6"
                       onError={(e) => {
-                        e.target.src = bapImg;
+                        const name = pkg.title.toLowerCase();
+                        if (name.includes("wedding")) {
+                          e.target.src = wedImg;
+                        } else if (name.includes("baptismal")) {
+                          e.target.src = bapImg;
+                        } else {
+                          e.target.src = venImg;
+                        }
                       }}
                     />
 
@@ -669,6 +716,7 @@ const ClientDashboard = () => {
                       <button
                         onClick={() => {
                           setSelectedPackage(pkg);
+                          setCurrentImageIndex(0);
                           setIsModalOpen(true);
                         }}
                         className="p-3 bg-black text-white rounded-xl hover:bg-[#B8860B] transition-all"
@@ -802,30 +850,107 @@ const ClientDashboard = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setIsModalOpen(false)}
+            onClick={() => {
+              setIsModalOpen(false);
+              setCurrentImageIndex(0);
+            }}
           ></div>
 
-          <div className="bg-white rounded-[2.5rem] w-full max-w-4xl relative z-10 p-10">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-4xl relative z-10 p-10 max-h-[90vh] overflow-y-auto">
             <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full"
+              onClick={() => {
+                setIsModalOpen(false);
+                setCurrentImageIndex(0);
+              }}
+              className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full z-20"
               tabIndex={0}
               aria-label="Close package"
             >
               <X size={18} />
             </button>
 
-            <h2 className="text-3xl font-black uppercase mb-6">
+            {/* Image Gallery Section */}
+            <div className="mb-6">
+              <h3 className="text-sm font-bold uppercase text-slate-400 mb-3">GALLERY</h3>
+              
+              {selectedPackage.all_images && selectedPackage.all_images.length > 0 ? (
+                <div className="relative">
+                  <div className="relative h-96 bg-slate-100 rounded-2xl overflow-hidden">
+                    <img
+                      src={selectedPackage.all_images[currentImageIndex]?.image_url}
+                      alt={`${selectedPackage.title} - Image ${currentImageIndex + 1}`}
+                      className="w-full h-full object-contain"
+                    />
+                    
+                    {selectedPackage.all_images.length > 1 && (
+                      <>
+                        <button
+                          onClick={prevImage}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
+                          aria-label="Previous image"
+                        >
+                          <ChevronLeft size={24} />
+                        </button>
+                        <button
+                          onClick={nextImage}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
+                          aria-label="Next image"
+                        >
+                          <ChevronRight size={24} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-2 mt-3 overflow-x-auto pb-2 justify-center">
+                    {selectedPackage.all_images.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentImageIndex(idx)}
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                          currentImageIndex === idx ? 'border-[#B8860B]' : 'border-slate-200 hover:border-slate-400'
+                        }`}
+                      >
+                        <img
+                          src={img.image_url}
+                          alt={`Thumbnail ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <p className="text-[10px] text-slate-400 mt-2 text-center">
+                    {currentImageIndex + 1} of {selectedPackage.all_images.length} images
+                  </p>
+                </div>
+              ) : (
+                <img
+                  src={selectedPackage.image}
+                  alt={selectedPackage.title}
+                  className="w-full h-96 object-cover rounded-2xl"
+                />
+              )}
+            </div>
+
+            <h2 className="text-3xl font-black uppercase mb-4">
               {selectedPackage.title}
             </h2>
 
-            <p className="text-slate-500 mb-8">
+            <p className="text-slate-500 mb-6">
               {selectedPackage.details}
             </p>
 
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-bold">Price per Pax</p>
+                <p className="text-2xl font-black text-[#B8860B]">{selectedPackage.price}</p>
+              </div>
+            </div>
+
             <button
               onClick={() => handleBooking(selectedPackage)}
-              className="bg-black text-white px-8 py-4 rounded-xl font-black uppercase hover:bg-[#B8860B]"
+              className="w-full bg-black text-white py-4 rounded-xl font-black uppercase hover:bg-[#B8860B] transition-all"
               tabIndex={0}
               aria-label="Reserve this package"
             >

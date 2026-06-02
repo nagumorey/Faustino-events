@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
-import { X, Mic, Volume2, Keyboard, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Mic, Volume2, Keyboard, Upload, Image as ImageIcon, Trash2, Star, Plus } from 'lucide-react';
 
 const AdminEvents = () => {
   const [events, setEvents] = useState([]);
@@ -12,6 +12,7 @@ const AdminEvents = () => {
   const [voiceFeedback, setVoiceFeedback] = useState("");
   const [uploading, setUploading] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [eventImages, setEventImages] = useState([]);
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
@@ -21,8 +22,6 @@ const AdminEvents = () => {
     event_status: 'Available',
     featured_event: false,
     event_description: '',
-    featured_image: null,
-    image_url: ''
   });
 
   const supabaseUrl = 'https://ekqixbskebdsjftlprwm.supabase.co';
@@ -72,7 +71,7 @@ const AdminEvents = () => {
         textToRead = "Save Package button. Press Enter to create new package.";
       }
       else if (activeElement.classList.contains("upload-btn")) {
-        textToRead = "Upload Image button. Press Enter to select an image.";
+        textToRead = "Upload Images button. Press Enter to select images.";
       }
       else if (activeElement.tagName === "INPUT") {
         const label = activeElement.getAttribute("placeholder") || activeElement.getAttribute("name");
@@ -97,30 +96,107 @@ const AdminEvents = () => {
     }
   };
 
-  const uploadImage = async (file) => {
-    if (!file) return null;
+  const uploadImages = async (files) => {
+    if (!files || files.length === 0) return [];
     
     setUploading(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `events/${fileName}`;
+    const uploadedUrls = [];
     
     try {
-      const { error: uploadError } = await supabase.storage
-        .from('event-images')
-        .upload(filePath, file);
-      
-      if (uploadError) throw uploadError;
-      
-      const publicUrl = `${supabaseUrl}/storage/v1/object/public/event-images/${filePath}`;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${i}.${fileExt}`;
+        const filePath = `events/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('event-images')
+          .upload(filePath, file);
+        
+        if (uploadError) throw uploadError;
+        
+        const publicUrl = `${supabaseUrl}/storage/v1/object/public/event-images/${filePath}`;
+        uploadedUrls.push(publicUrl);
+      }
       
       setUploading(false);
-      return publicUrl;
+      return uploadedUrls;
     } catch (error) {
       console.error("Upload error:", error);
       speak("Image upload failed");
       setUploading(false);
-      return null;
+      return [];
+    }
+  };
+
+  const fetchEventImages = async (eventId) => {
+    if (!eventId) return;
+    
+    const { data, error } = await supabase
+      .from('event_images')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('display_order', { ascending: true });
+    
+    if (!error && data) {
+      setEventImages(data);
+      return data;
+    }
+    return [];
+  };
+
+  const saveEventImages = async (eventId, imageUrls, isFirstBatch = true) => {
+    if (!eventId || imageUrls.length === 0) return;
+    
+    const imagesToInsert = imageUrls.map((url, index) => ({
+      event_id: eventId,
+      image_url: url,
+      is_cover: isFirstBatch && index === 0,
+      display_order: index
+    }));
+    
+    const { error } = await supabase
+      .from('event_images')
+      .insert(imagesToInsert);
+    
+    if (error) {
+      console.error("Error saving images:", error);
+    }
+  };
+
+  const deleteImage = async (imageId) => {
+    const { error } = await supabase
+      .from('event_images')
+      .delete()
+      .eq('image_id', imageId);
+    
+    if (error) {
+      console.error("Error deleting image:", error);
+      alert("Failed to delete image");
+    } else {
+      if (editingEvent) {
+        await fetchEventImages(editingEvent.event_id);
+      }
+      speak("Image deleted");
+    }
+  };
+
+  const setAsCover = async (imageId) => {
+    if (!editingEvent) return;
+    
+    await supabase
+      .from('event_images')
+      .update({ is_cover: false })
+      .eq('event_id', editingEvent.event_id);
+    
+    const { error } = await supabase
+      .from('event_images')
+      .update({ is_cover: true })
+      .eq('image_id', imageId);
+    
+    if (!error) {
+      await fetchEventImages(editingEvent.event_id);
+      speak("Cover image updated");
     }
   };
 
@@ -138,6 +214,7 @@ const AdminEvents = () => {
       if (isModalOpen) {
         setIsModalOpen(false);
         setEditingEvent(null);
+        setEventImages([]);
         setFormData({
           event_name: '',
           venue: '',
@@ -145,8 +222,6 @@ const AdminEvents = () => {
           event_status: 'Available',
           featured_event: false,
           event_description: '',
-          featured_image: null,
-          image_url: ''
         });
         speak("Form closed");
       }
@@ -246,7 +321,20 @@ const AdminEvents = () => {
       if (error) {
         console.error(error.message);
       } else {
-        setEvents(data || []);
+        const eventsWithCover = await Promise.all((data || []).map(async (event) => {
+          const { data: coverData } = await supabase
+            .from('event_images')
+            .select('image_url')
+            .eq('event_id', event.event_id)
+            .eq('is_cover', true)
+            .single();
+          
+          return {
+            ...event,
+            cover_image: coverData?.image_url || null
+          };
+        }));
+        setEvents(eventsWithCover || []);
       }
     } catch (err) {
       console.error(err);
@@ -269,23 +357,25 @@ const AdminEvents = () => {
   };
 
   const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setUploading(true);
-      const imageUrl = await uploadImage(file);
-      if (imageUrl) {
-        setFormData({
-          ...formData,
-          featured_image: file,
-          image_url: imageUrl
-        });
-        speak("Image uploaded successfully");
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      const uploadedUrls = await uploadImages(files);
+      if (uploadedUrls.length > 0 && editingEvent) {
+        const isFirstBatch = eventImages.length === 0;
+        await saveEventImages(editingEvent.event_id, uploadedUrls, isFirstBatch);
+        await fetchEventImages(editingEvent.event_id);
+      } else if (uploadedUrls.length > 0) {
+        window.tempImages = window.tempImages || [];
+        window.tempImages.push(...uploadedUrls);
       }
-      setUploading(false);
+      speak(`${uploadedUrls.length} images uploaded`);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  const handleEdit = (event) => {
+  const handleEdit = async (event) => {
     setEditingEvent(event);
     setFormData({
       event_name: event.event_name || '',
@@ -294,11 +384,15 @@ const AdminEvents = () => {
       event_status: event.event_status || 'Available',
       featured_event: event.featured_event || false,
       event_description: event.event_description || '',
-      featured_image: null,
-      image_url: event.featured_image || ''
     });
+    await fetchEventImages(event.event_id);
     setIsModalOpen(true);
     speak(`Editing ${event.event_name}`);
+  };
+
+  const getCoverImage = (event) => {
+    if (event.cover_image) return event.cover_image;
+    return null;
   };
 
   const handleUpdate = async (e) => {
@@ -307,12 +401,6 @@ const AdminEvents = () => {
     setUploading(true);
     
     try {
-      let finalImageUrl = formData.image_url;
-      
-      if (formData.featured_image) {
-        finalImageUrl = await uploadImage(formData.featured_image);
-      }
-      
       const updateData = {
         event_name: formData.event_name,
         venue: formData.venue,
@@ -322,10 +410,6 @@ const AdminEvents = () => {
         event_description: formData.event_description,
       };
       
-      if (finalImageUrl && finalImageUrl !== "") {
-        updateData.featured_image = finalImageUrl;
-      }
-      
       const { error } = await supabase
         .from('events')
         .update(updateData)
@@ -333,10 +417,17 @@ const AdminEvents = () => {
 
       if (error) throw error;
 
+      if (window.tempImages && window.tempImages.length > 0) {
+        const isFirstBatch = eventImages.length === 0;
+        await saveEventImages(editingEvent.event_id, window.tempImages, isFirstBatch);
+        window.tempImages = [];
+      }
+
       speak("Package updated successfully");
       alert('Event Package Updated Successfully!');
       setIsModalOpen(false);
       setEditingEvent(null);
+      setEventImages([]);
       setFormData({
         event_name: '',
         venue: '',
@@ -344,8 +435,6 @@ const AdminEvents = () => {
         event_status: 'Available',
         featured_event: false,
         event_description: '',
-        featured_image: null,
-        image_url: ''
       });
       await fetchEvents();
     } catch (err) {
@@ -368,12 +457,6 @@ const AdminEvents = () => {
     setUploading(true);
     
     try {
-      let finalImageUrl = formData.image_url;
-      
-      if (formData.featured_image && !formData.image_url) {
-        finalImageUrl = await uploadImage(formData.featured_image);
-      }
-      
       const insertData = {
         event_name: formData.event_name,
         venue: formData.venue,
@@ -383,15 +466,19 @@ const AdminEvents = () => {
         event_description: formData.event_description,
       };
       
-      if (finalImageUrl && finalImageUrl !== "") {
-        insertData.featured_image = finalImageUrl;
-      }
-      
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('events')
-        .insert([insertData]);
+        .insert([insertData])
+        .select();
 
       if (error) throw error;
+
+      const newEventId = data[0].event_id;
+
+      if (window.tempImages && window.tempImages.length > 0) {
+        await saveEventImages(newEventId, window.tempImages, true);
+        window.tempImages = [];
+      }
 
       speak("Package created successfully");
       alert('Event Package Created Successfully!');
@@ -403,8 +490,6 @@ const AdminEvents = () => {
         event_status: 'Available',
         featured_event: false,
         event_description: '',
-        featured_image: null,
-        image_url: ''
       });
       await fetchEvents();
     } catch (err) {
@@ -471,7 +556,10 @@ const AdminEvents = () => {
             Back to Dashboard
           </Link>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsModalOpen(true);
+              window.tempImages = [];
+            }}
             className="add-btn bg-black text-white px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-all"
             tabIndex={0}
             aria-label="Add New Package button"
@@ -486,9 +574,9 @@ const AdminEvents = () => {
           events.map((e) => (
             <div key={e.event_id} className="package-card bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
               <div className="relative h-48 overflow-hidden bg-slate-100">
-                {e.featured_image && e.featured_image !== "" && e.featured_image !== null ? (
+                {getCoverImage(e) ? (
                   <img 
-                    src={e.featured_image} 
+                    src={getCoverImage(e)} 
                     alt={e.event_name} 
                     className="w-full h-full object-cover" 
                   />
@@ -554,11 +642,13 @@ const AdminEvents = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white max-w-md w-full rounded-[2rem] p-8 border border-slate-100 shadow-2xl relative my-8">
+          <div className="bg-white max-w-2xl w-full rounded-[2rem] p-8 border border-slate-100 shadow-2xl relative my-8">
             <button 
               onClick={() => {
                 setIsModalOpen(false);
                 setEditingEvent(null);
+                setEventImages([]);
+                window.tempImages = [];
                 setFormData({
                   event_name: '',
                   venue: '',
@@ -566,8 +656,6 @@ const AdminEvents = () => {
                   event_status: 'Available',
                   featured_event: false,
                   event_description: '',
-                  featured_image: null,
-                  image_url: ''
                 });
               }}
               className="close-modal-btn absolute right-6 top-6 text-slate-400 hover:text-black transition-colors"
@@ -645,35 +733,74 @@ const AdminEvents = () => {
               </div>
 
               <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 block">Event Image</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 block">Event Images (Multiple)</label>
                 <input 
                   type="file"
                   ref={fileInputRef}
                   onChange={handleImageChange}
                   accept="image/*"
+                  multiple
                   className="hidden"
                   tabIndex={0}
-                  aria-label="Upload image file"
+                  aria-label="Upload multiple images"
                 />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="upload-btn w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold outline-none focus:border-[#B8860B] transition-all flex items-center justify-center gap-2"
                   tabIndex={0}
-                  aria-label="Upload Image button"
+                  aria-label="Upload Images button"
                   disabled={uploading}
                 >
                   <Upload size={16} />
-                  {uploading ? "Uploading..." : "Click to Upload Image"}
+                  {uploading ? "Uploading..." : "Click to Upload Multiple Images"}
                 </button>
-                <div className="mt-2">
-                  <img 
-                    id="imagePreview"
-                    src={formData.image_url || "https://placehold.co/80x80?text=No+Image"} 
-                    alt="Preview" 
-                    className="w-20 h-20 object-cover rounded-lg" 
-                  />
-                </div>
+                
+                {/* Image Gallery */}
+                {(editingEvent ? eventImages.length > 0 : window.tempImages?.length > 0) && (
+                  <div className="mt-4">
+                    <p className="text-[10px] font-bold text-slate-500 mb-2">Image Gallery</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(editingEvent ? eventImages : (window.tempImages || []).map((url, idx) => ({ image_url: url, is_cover: idx === 0, image_id: `temp_${idx}` }))).map((img, idx) => (
+                        <div key={img.image_id || idx} className="relative group">
+                          <img 
+                            src={img.image_url} 
+                            alt={`Event ${idx + 1}`} 
+                            className="w-20 h-20 object-cover rounded-lg border-2 border-slate-200"
+                          />
+                          {img.is_cover && (
+                            <div className="absolute -top-2 -right-2 bg-[#B8860B] text-white rounded-full p-1">
+                              <Star size={10} />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                            {!img.is_cover && editingEvent && (
+                              <button
+                                type="button"
+                                onClick={() => setAsCover(img.image_id)}
+                                className="bg-[#B8860B] text-white p-1 rounded"
+                                title="Set as cover"
+                              >
+                                <Star size={12} />
+                              </button>
+                            )}
+                            {editingEvent && (
+                              <button
+                                type="button"
+                                onClick={() => deleteImage(img.image_id)}
+                                className="bg-red-500 text-white p-1 rounded"
+                                title="Delete image"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[8px] text-slate-400 mt-2">* The FIRST image uploaded automatically becomes the COVER PHOTO</p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -714,7 +841,7 @@ const AdminEvents = () => {
                 tabIndex={0}
                 aria-label="Save Package button"
               >
-                {uploading ? "Uploading Image..." : (editingEvent ? "Update Package" : "Save Package")}
+                {uploading ? "Uploading Images..." : (editingEvent ? "Update Package" : "Save Package")}
               </button>
             </form>
           </div>
