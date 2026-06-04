@@ -106,26 +106,12 @@ const BookNow = () => {
       const dates = data.map(item => item.event_date).filter(d => d);
       setBookedEventDates(dates);
       
-      const allBlockedDates = [];
+      // ✅ TANGGAL NA ANG 7-DAY BLOCKING!
+      // Dati may loop na nagba-block ng 7 days, ngayon wala na.
+      // Blocked dates ay yung mismong booked dates lang.
+      const allBlockedDates = [...dates];
       
-      dates.forEach(dateStr => {
-        if (!dateStr) return;
-        const [year, month, day] = dateStr.split('-');
-        const baseDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        baseDate.setHours(0, 0, 0, 0);
-        
-        for (let i = 0; i <= 6; i++) {
-          const newDate = new Date(baseDate);
-          newDate.setDate(baseDate.getDate() + i);
-          const newDateStr = formatDateToYMD(newDate);
-          if (newDateStr && !allBlockedDates.includes(newDateStr)) {
-            allBlockedDates.push(newDateStr);
-          }
-        }
-      });
-      
-      const uniqueBlocked = [...new Set(allBlockedDates)];
-      setBlockedDates(uniqueBlocked);
+      setBlockedDates(allBlockedDates);
 
       const occupied = {};
       const appointmentCount = {};
@@ -315,12 +301,8 @@ const BookNow = () => {
         return;
       }
       
-      if (eventDateStr && blockedDates.includes(eventDateStr)) {
-        setAlertMessage(`This date is within 7 days of an existing booking. Please select another date.`);
-        setIsSubmitting(false);
-        return;
-      }
-      
+      // ✅ TANGGAL NA ANG 7-DAY BLOCKING CHECK!
+      // Dati may condition para sa blockedDates, ngayon ang dine-declare na lang ay kung exact date ang may booking.
       if (eventDateStr && bookedEventDates.includes(eventDateStr)) {
         setAlertMessage(`This date is already booked. Please select another date.`);
         setIsSubmitting(false);
