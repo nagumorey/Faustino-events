@@ -24,7 +24,6 @@ const BookNow = () => {
   const [bookingData, setBookingData] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [paymentType, setPaymentType] = useState("downpayment");
-  const [customDownPayment, setCustomDownPayment] = useState("");
   const [processing, setProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [bookedEventDates, setBookedEventDates] = useState([]);
@@ -33,8 +32,6 @@ const BookNow = () => {
   const [fullAppointmentDates, setFullAppointmentDates] = useState([]);
 
   const numericPrice = price_raw || parseFloat(price?.replace(/[^\d.]/g, "") || 0);
-  const defaultDownPayment = numericPrice * 0.2;
-  const fullPaymentAmount = numericPrice;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -106,11 +103,8 @@ const BookNow = () => {
       const dates = data.map(item => item.event_date).filter(d => d);
       setBookedEventDates(dates);
       
-      // ✅ TANGGAL NA ANG 7-DAY BLOCKING!
-      // Dati may loop na nagba-block ng 7 days, ngayon wala na.
-      // Blocked dates ay yung mismong booked dates lang.
+      // Exact dates only - NO 7-day blocking
       const allBlockedDates = [...dates];
-      
       setBlockedDates(allBlockedDates);
 
       const occupied = {};
@@ -208,7 +202,6 @@ const BookNow = () => {
     });
     setSelectedPaymentMethod("");
     setPaymentType("downpayment");
-    setCustomDownPayment("");
     setBookingData(null);
     setShowPaymentModal(false);
     setPaymentSuccess(false);
@@ -218,7 +211,6 @@ const BookNow = () => {
     setShowPaymentModal(false);
     setSelectedPaymentMethod("");
     setPaymentType("downpayment");
-    setCustomDownPayment("");
     setBookingData(null);
     resetForm();
   };
@@ -301,8 +293,6 @@ const BookNow = () => {
         return;
       }
       
-      // ✅ TANGGAL NA ANG 7-DAY BLOCKING CHECK!
-      // Dati may condition para sa blockedDates, ngayon ang dine-declare na lang ay kung exact date ang may booking.
       if (eventDateStr && bookedEventDates.includes(eventDateStr)) {
         setAlertMessage(`This date is already booked. Please select another date.`);
         setIsSubmitting(false);
@@ -405,6 +395,10 @@ const BookNow = () => {
         email = session.user.email;
       }
 
+      // ✅ TOTAL AMOUNT = amount_per_pax × total_pax
+      const computedTotalAmount = finalEventPrice * totalPax;
+      const downPaymentAmount = computedTotalAmount * 0.2; // 20% fixed
+
       const insertData = {
         user_id: session.user.id,
         event_type: selectedType,
@@ -416,14 +410,14 @@ const BookNow = () => {
         start_time: formattedStartTime,
         end_time: formattedEndTime,
         total_pax: totalPax,
-        amount: finalEventPrice,
-        total_amount: finalEventPrice,
+        amount: computedTotalAmount,
+        total_amount: computedTotalAmount,
         price: finalEventPrice,
         payment_status: "Pending",
         booking_status: "Pending",
         down_payment: 0,
         amount_paid: 0,
-        remaining_balance: finalEventPrice,
+        remaining_balance: computedTotalAmount,
         venue: eventVenue,
         first_name: firstName,
         last_name: lastName,
@@ -457,7 +451,7 @@ const BookNow = () => {
         {
           booking_id: createdBooking.booking_id,
           is_read: false,
-          message: `New Booking Alert: ${firstName} ${lastName} booked ${selectedType} on ${eventDateStr} at ${formData.start_time}. Appointment: ${appointmentDateStr} at ${formData.appointment_time}. Status: Pending Payment.`,
+          message: `New Booking Alert: ${firstName} ${lastName} booked ${selectedType} on ${eventDateStr} at ${formData.start_time}. Appointment: ${appointmentDateStr} at ${formData.appointment_time}. Total Amount: ₱${computedTotalAmount.toLocaleString()}. Status: Pending Payment.`,
         },
       ]);
 
@@ -477,19 +471,15 @@ const BookNow = () => {
       return;
     }
 
+    // Kunin ang total amount mula sa bookingData
+    const totalAmount = bookingData?.total_amount || (numericPrice * (parseInt(formData.total_pax) || 1));
+    const downPaymentAmount = totalAmount * 0.2; // ✅ Fixed 20%
+    
     let amountToPay;
     if (paymentType === "downpayment") {
-      if (customDownPayment && customDownPayment > 0) {
-        if (customDownPayment > numericPrice) {
-          alert("Down payment cannot exceed total amount");
-          return;
-        }
-        amountToPay = parseFloat(customDownPayment);
-      } else {
-        amountToPay = defaultDownPayment;
-      }
+      amountToPay = downPaymentAmount;
     } else {
-      amountToPay = fullPaymentAmount;
+      amountToPay = totalAmount;
     }
 
     setProcessing(true);
@@ -502,8 +492,8 @@ const BookNow = () => {
       transaction_id: transactionId,
       payment_date: new Date().toISOString(),
       amount_paid: amountToPay,
-      down_payment: paymentType === "downpayment" ? amountToPay : 0,
-      remaining_balance: numericPrice - amountToPay,
+      down_payment: paymentType === "downpayment" ? downPaymentAmount : 0,
+      remaining_balance: totalAmount - amountToPay,
     };
 
     const { error } = await supabase
@@ -516,7 +506,7 @@ const BookNow = () => {
         {
           booking_id: bookingData.booking_id,
           is_read: false,
-          message: `Payment Received: ₱${amountToPay.toLocaleString()} paid for ${selectedType} on ${bookingData.event_date}. Payment type: ${paymentType === "downpayment" ? "Down Payment" : "Full Payment"}. Remaining balance: ₱${(numericPrice - amountToPay).toLocaleString()}.`,
+          message: `Payment Received: ₱${amountToPay.toLocaleString()} paid for ${selectedType} on ${bookingData.event_date}. Payment type: ${paymentType === "downpayment" ? "Down Payment (20%)" : "Full Payment"}. Remaining balance: ₱${(totalAmount - amountToPay).toLocaleString()}.`,
         },
       ]);
 
@@ -530,6 +520,17 @@ const BookNow = () => {
     }
     setProcessing(false);
   };
+
+  // Compute para sa display sa payment modal
+  const getTotalAmount = () => {
+    if (bookingData?.total_amount) return bookingData.total_amount;
+    const totalPax = parseInt(formData.total_pax) || 1;
+    return numericPrice * totalPax;
+  };
+
+  const totalAmountDisplay = getTotalAmount();
+  const downPaymentDisplay = totalAmountDisplay * 0.2;
+  const remainingBalanceDisplay = totalAmountDisplay - downPaymentDisplay;
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-6 relative">
@@ -564,13 +565,6 @@ const BookNow = () => {
           z-index: 10;
           font-weight: normal;
         }
-        .react-datepicker__day--blocked {
-          background-color: #fed7aa !important;
-          color: #9a3412 !important;
-          text-decoration: line-through !important;
-          cursor: not-allowed !important;
-          opacity: 0.6 !important;
-        }
         .react-datepicker__day--available {
           background-color: white !important;
           color: #1e293b !important;
@@ -579,20 +573,21 @@ const BookNow = () => {
           background-color: #B8860B !important;
           color: white !important;
         }
-        .react-datepicker__day--has-event {
-          background-color: #dbeafe !important;
-          color: #1e40af !important;
-          font-weight: bold !important;
-          text-decoration: none !important;
+        .react-datepicker__day--event-date-appointment {
+          background-color: #d4a373 !important;
+          color: white !important;
+          text-decoration: line-through !important;
+          cursor: not-allowed !important;
+          opacity: 0.7 !important;
           position: relative;
         }
-        .react-datepicker__day--has-event:hover::after {
-          content: "⚠️ There is an event on this date!";
+        .react-datepicker__day--event-date-appointment:hover::after {
+          content: "⚠️ Cannot appoint on this date! There is an existing event.";
           position: absolute;
           bottom: 100%;
           left: 50%;
           transform: translateX(-50%);
-          background: #1e40af;
+          background: #8B4513;
           color: white;
           font-size: 10px;
           padding: 4px 8px;
@@ -623,36 +618,6 @@ const BookNow = () => {
           white-space: nowrap;
           z-index: 10;
           font-weight: normal;
-        }
-        .react-datepicker__day--event-date-appointment {
-          background-color: #d4a373 !important;
-          color: white !important;
-          text-decoration: line-through !important;
-          cursor: not-allowed !important;
-          opacity: 0.7 !important;
-          position: relative;
-        }
-        .react-datepicker__day--event-date-appointment:hover::after {
-          content: "⚠️ Cannot appoint on this date! There is an existing event.";
-          position: absolute;
-          bottom: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #8B4513;
-          color: white;
-          font-size: 10px;
-          padding: 4px 8px;
-          border-radius: 6px;
-          white-space: nowrap;
-          z-index: 10;
-          font-weight: normal;
-        }
-        .react-datepicker__day--time-passed {
-          background-color: #f3f4f6 !important;
-          color: #9ca3af !important;
-          text-decoration: line-through !important;
-          cursor: not-allowed !important;
-          opacity: 0.6 !important;
         }
         .react-datepicker__day--out-of-range {
           background-color: #fee2e2 !important;
@@ -689,7 +654,10 @@ const BookNow = () => {
           <div className="bg-white max-w-md w-full rounded-[2rem] p-8 text-center">
             <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
             <h3 className="text-2xl font-black uppercase mb-2">Booking Successful!</h3>
-            <p className="text-gray-500 mb-6">Your booking has been confirmed. {paymentType === "downpayment" && `Remaining balance of ₱${(numericPrice - (customDownPayment || defaultDownPayment)).toLocaleString()} is payable before the event.`}</p>
+            <p className="text-gray-500 mb-6">
+              Your booking has been confirmed. 
+              {paymentType === "downpayment" && ` Remaining balance of ₱${remainingBalanceDisplay.toLocaleString()} is payable before the event.`}
+            </p>
             <button 
               onClick={() => {
                 resetForm();
@@ -720,24 +688,21 @@ const BookNow = () => {
               <p className="font-bold">{bookingData.event_type || selectedType}</p>
               <p className="text-sm text-gray-600">Event: {bookingData.event_date ? new Date(bookingData.event_date).toLocaleDateString() : formData.event_date?.toLocaleDateString()} | {bookingData.start_time || formData.start_time} - {bookingData.end_time || formData.end_time}</p>
               <p className="text-sm text-gray-600">Appointment: {bookingData.appointment_date ? new Date(bookingData.appointment_date).toLocaleDateString() : formData.appointment_date?.toLocaleDateString()} at {bookingData.appointment_time || formData.appointment_time}</p>
-              <p className="text-sm text-gray-600">Guests: {bookingData.total_pax || formData.total_pax}</p>
+              <p className="text-sm text-gray-600">Guests: {bookingData.total_pax || formData.total_pax} Pax</p>
             </div>
 
             <div className="mb-6">
               <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Payment Type</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => {
-                    setPaymentType("downpayment");
-                    setCustomDownPayment("");
-                  }}
+                  onClick={() => setPaymentType("downpayment")}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     paymentType === "downpayment" ? "border-[#B8860B] bg-[#B8860B]/10" : "border-gray-200"
                   }`}
                 >
                   <Percent size={24} className="mx-auto mb-2" />
                   <p className="font-bold text-sm">Down Payment</p>
-                  <p className="text-xs text-gray-500">Min: ₱{defaultDownPayment.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">20% of Total</p>
                 </button>
                 <button
                   onClick={() => setPaymentType("full")}
@@ -747,30 +712,10 @@ const BookNow = () => {
                 >
                   <CreditCard size={24} className="mx-auto mb-2" />
                   <p className="font-bold text-sm">Full Payment</p>
-                  <p className="text-xs text-gray-500">₱{fullPaymentAmount.toLocaleString()}.00</p>
+                  <p className="text-xs text-gray-500">Pay in Full</p>
                 </button>
               </div>
             </div>
-
-            {paymentType === "downpayment" && (
-              <div className="mb-6">
-                <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Enter Down Payment Amount</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₱</span>
-                  <input
-                    type="number"
-                    min={defaultDownPayment}
-                    max={numericPrice}
-                    step="100"
-                    value={customDownPayment}
-                    onChange={(e) => setCustomDownPayment(e.target.value)}
-                    placeholder={`Minimum: ₱${defaultDownPayment.toLocaleString()}`}
-                    className="w-full bg-white border border-gray-200 pl-8 pr-4 py-3 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all"
-                  />
-                </div>
-                <p className="text-[8px] text-gray-400 mt-1">Minimum down payment is 20% of total amount</p>
-              </div>
-            )}
 
             <div className="mb-6">
               <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Payment Method</label>
@@ -816,17 +761,35 @@ const BookNow = () => {
 
             <div className="bg-gray-50 p-4 rounded-xl mb-6">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Total Amount:</span>
-                <span className="font-bold text-xl text-[#B8860B]">₱{numericPrice.toLocaleString()}.00</span>
+                <span className="text-gray-600">Package Price (per pax):</span>
+                <span className="font-bold">₱{numericPrice.toLocaleString()}.00</span>
+              </div>
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-gray-600">Total Guests:</span>
+                <span className="font-bold">{bookingData.total_pax || formData.total_pax || 0} Pax</span>
               </div>
               <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
-                <span className="text-gray-600">Amount to Pay:</span>
-                <span className="font-bold text-xl text-[#B8860B]">
-                  ₱{paymentType === "downpayment" ? (customDownPayment ? parseFloat(customDownPayment).toLocaleString() : defaultDownPayment.toLocaleString()) : fullPaymentAmount.toLocaleString()}.00
-                </span>
+                <span className="text-gray-600 font-bold">Total Amount:</span>
+                <span className="font-bold text-xl text-[#B8860B]">₱{totalAmountDisplay.toLocaleString()}.00</span>
               </div>
               {paymentType === "downpayment" && (
-                <p className="text-[10px] text-gray-400 mt-2">* Remaining balance of ₱{(numericPrice - (customDownPayment ? parseFloat(customDownPayment) : defaultDownPayment)).toLocaleString()}.00 to be paid before the event</p>
+                <>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-gray-600">Down Payment (20%):</span>
+                    <span className="font-bold text-[#B8860B]">₱{downPaymentDisplay.toLocaleString()}.00</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-gray-600">Remaining Balance:</span>
+                    <span className="font-bold">₱{remainingBalanceDisplay.toLocaleString()}.00</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">* Down payment is fixed at 20% of total amount. Balance to be paid before the event.</p>
+                </>
+              )}
+              {paymentType === "full" && (
+                <div className="flex justify-between items-center mt-2 pt-2">
+                  <span className="text-gray-600 font-bold">Total to Pay:</span>
+                  <span className="font-bold text-xl text-[#B8860B]">₱{totalAmountDisplay.toLocaleString()}.00</span>
+                </div>
               )}
             </div>
 
@@ -841,7 +804,7 @@ const BookNow = () => {
                   Processing...
                 </div>
               ) : (
-                `Pay ₱${paymentType === "downpayment" ? (customDownPayment ? parseFloat(customDownPayment).toLocaleString() : defaultDownPayment.toLocaleString()) : fullPaymentAmount.toLocaleString()}`
+                `Pay ₱${paymentType === "downpayment" ? downPaymentDisplay.toLocaleString() : totalAmountDisplay.toLocaleString()}`
               )}
             </button>
           </div>
@@ -872,7 +835,7 @@ const BookNow = () => {
             <div>
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Selected Package</p>
               <p className="font-black text-lg uppercase tracking-tight leading-none mb-1">{selectedType || "No Package"}</p>
-              <p className="text-[#B8860B] font-bold text-sm tracking-tight">{price}</p>
+              <p className="text-[#B8860B] font-bold text-sm tracking-tight">₱{numericPrice.toLocaleString()}.00 / pax</p>
             </div>
           </div>
 
@@ -1084,6 +1047,27 @@ const BookNow = () => {
                 </div>
               </div>
             </div>
+
+            {/* Preview ng Total Amount based sa input */}
+            {formData.total_pax && parseInt(formData.total_pax) >= 50 && (
+              <div className="bg-[#B8860B]/5 p-4 rounded-xl border border-[#B8860B]/20">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black uppercase text-gray-600">Total Amount:</span>
+                  <span className="font-bold text-xl text-[#B8860B]">
+                    ₱{(numericPrice * parseInt(formData.total_pax)).toLocaleString()}.00
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-[8px] text-gray-500">Down Payment (20%):</span>
+                  <span className="text-xs font-bold text-[#B8860B]">
+                    ₱{(numericPrice * parseInt(formData.total_pax) * 0.2).toLocaleString()}.00
+                  </span>
+                </div>
+                <p className="text-[8px] text-gray-400 mt-2">
+                  * Down payment of 20% is required to confirm your booking.
+                </p>
+              </div>
+            )}
 
             <button 
               type="submit" 
