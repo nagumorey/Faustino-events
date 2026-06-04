@@ -20,7 +20,6 @@ const AdminEvents = () => {
     venue: '',
     amount_per_pax: '',
     event_status: 'Available',
-    featured_event: false,
     event_description: '',
   });
 
@@ -220,7 +219,6 @@ const AdminEvents = () => {
           venue: '',
           amount_per_pax: '',
           event_status: 'Available',
-          featured_event: false,
           event_description: '',
         });
         speak("Form closed");
@@ -382,7 +380,6 @@ const AdminEvents = () => {
       venue: event.venue || '',
       amount_per_pax: event.amount_per_pax || '',
       event_status: event.event_status || 'Available',
-      featured_event: event.featured_event || false,
       event_description: event.event_description || '',
     });
     await fetchEventImages(event.event_id);
@@ -406,7 +403,6 @@ const AdminEvents = () => {
         venue: formData.venue,
         amount_per_pax: parseFloat(formData.amount_per_pax) || 0,
         event_status: formData.event_status,
-        featured_event: formData.featured_event,
         event_description: formData.event_description,
       };
       
@@ -433,7 +429,6 @@ const AdminEvents = () => {
         venue: '',
         amount_per_pax: '',
         event_status: 'Available',
-        featured_event: false,
         event_description: '',
       });
       await fetchEvents();
@@ -462,7 +457,6 @@ const AdminEvents = () => {
         venue: formData.venue,
         amount_per_pax: parseFloat(formData.amount_per_pax) || 0,
         event_status: formData.event_status,
-        featured_event: formData.featured_event,
         event_description: formData.event_description,
       };
       
@@ -488,7 +482,6 @@ const AdminEvents = () => {
         venue: '',
         amount_per_pax: '',
         event_status: 'Available',
-        featured_event: false,
         event_description: '',
       });
       await fetchEvents();
@@ -602,9 +595,6 @@ const AdminEvents = () => {
                   }`}>
                     {e.event_status || 'Unavailable'}
                   </span>
-                  {e.featured_event && (
-                    <span className="text-[10px] text-[#D4AF37] font-bold uppercase italic">★ Featured</span>
-                  )}
                 </div>
                 
                 <h3 className="event-name text-xl font-bold text-slate-800 mb-1">{e.event_name}</h3>
@@ -654,7 +644,6 @@ const AdminEvents = () => {
                   venue: '',
                   amount_per_pax: '',
                   event_status: 'Available',
-                  featured_event: false,
                   event_description: '',
                 });
               }}
@@ -816,22 +805,6 @@ const AdminEvents = () => {
                   <option value="Available">Available</option>
                   <option value="Unavailable">Unavailable</option>
                 </select>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <input 
-                  type="checkbox"
-                  id="featured_event"
-                  name="featured_event"
-                  checked={formData.featured_event}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 rounded text-[#B8860B] focus:ring-[#B8860B]"
-                  tabIndex={0}
-                  aria-label="Featured event checkbox"
-                />
-                <label htmlFor="featured_event" className="text-xs font-bold text-slate-600 uppercase tracking-wider select-none">
-                  Mark as Featured Event
-                </label>
               </div>
 
               <button 

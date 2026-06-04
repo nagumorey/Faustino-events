@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
-import { Check, X, Calendar, Clock, Users, Save, FileImage, User, Search, Percent, CreditCard, Trash2, PlusCircle } from 'lucide-react';
+import { Check, X, Calendar, Clock, Users, Save, FileImage, User, Search, Percent, CreditCard, Trash2, PlusCircle, RefreshCw } from 'lucide-react';
 
 const AdminBookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -162,6 +162,52 @@ const AdminBookings = () => {
     }
   };
 
+  const handleMarkAsRefunded = async (booking) => {
+    const refundAmount = booking.amount_paid_display || booking.amount_paid || 0;
+    
+    if (refundAmount <= 0) {
+      alert('No payment to refund for this booking.');
+      return;
+    }
+    
+    if (!window.confirm(`Process refund for booking #${booking.booking_id}? Amount: ₱${refundAmount.toLocaleString()}\n\nMake sure you have already sent the money back to the client via ${booking.payment_method || 'their payment method'}.`)) {
+      return;
+    }
+    
+    try {
+      const numericBookingId = parseInt(booking.booking_id, 10);
+      
+      const updateData = {
+        payment_status: 'Refunded',
+        refund_date: new Date().toISOString(),
+        refund_amount: refundAmount,
+        amount_paid: 0,
+        remaining_balance: booking.total_amount_display
+      };
+      
+      const { error } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('booking_id', numericBookingId);
+
+      if (error) throw error;
+      
+      await supabase.from('notifications').insert([
+        {
+          booking_id: numericBookingId,
+          is_read: false,
+          message: `✅ REFUND COMPLETED: Booking #${booking.booking_id}. Amount: ₱${refundAmount.toLocaleString()} has been refunded to the client.`,
+        }
+      ]);
+      
+      alert(`Refund marked as completed for Booking #${booking.booking_id}!`);
+      fetchBookings();
+    } catch (err) {
+      console.error("Refund Error:", err);
+      alert('Error processing refund: ' + err.message);
+    }
+  };
+
   const handleAdditionalPaymentChange = (bookingId, value) => {
     const newValue = value === '' ? '' : parseFloat(value);
     setAdditionalPayment(prev => ({
@@ -280,6 +326,12 @@ const AdminBookings = () => {
     if (status === 'Downpayment' || status === 'DOWNPAYMENT') {
       return 'bg-blue-100 text-blue-700';
     }
+    if (status === 'Refund Pending' || status === 'REFUND PENDING') {
+      return 'bg-orange-100 text-orange-700';
+    }
+    if (status === 'Refunded' || status === 'REFUNDED') {
+      return 'bg-purple-100 text-purple-700';
+    }
     return 'bg-red-100 text-red-700';
   };
 
@@ -381,14 +433,15 @@ const AdminBookings = () => {
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2 text-slate-700 text-xs font-semibold">
                           <Calendar size={14} className="text-slate-400" />
-                          {b.event_date || b.appointment_date || 'TBD'}
+                          Event: {b.event_date || 'TBD'}
                         </div>
                         <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
                           <Clock size={14} className="text-slate-400" />
-                          <span>
-                            {(b.appointment_time || b.start_time || '00:00').substring(0, 5)} 
-                            {b.end_time ? ` - ${b.end_time.substring(0, 5)}` : ''}
-                          </span>
+                          Time: {b.start_time ? b.start_time.substring(0, 5) : '00:00'} - {b.end_time ? b.end_time.substring(0, 5) : '00:00'}
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-500 text-xs font-medium">
+                          <Calendar size={12} className="text-slate-400" />
+                          Appt: {b.appointment_date || 'Not set'} {b.appointment_time ? `at ${b.appointment_time.substring(0, 5)}` : ''}
                         </div>
                       </div>
                     </td>
@@ -401,7 +454,9 @@ const AdminBookings = () => {
                         </div>
                         <div className="text-xs">
                           <span className="text-slate-500">Paid: </span>
-                          <span className="font-bold text-green-600">₱{b.amount_paid_display.toLocaleString()}</span>
+                          <span className={`font-bold ${b.payment_status === 'Refunded' ? 'text-purple-600' : 'text-green-600'}`}>
+                            ₱{b.amount_paid_display.toLocaleString()}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <div className="relative flex-1">
@@ -412,16 +467,18 @@ const AdminBookings = () => {
                               onChange={(e) => handleAdditionalPaymentChange(b.booking_id, e.target.value)}
                               placeholder="Add payment"
                               className="w-full pl-5 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-[#B8860B]"
+                              disabled={b.payment_status === 'Refunded' || b.payment_status === 'Refund Pending'}
                             />
                           </div>
                           <button
                             onClick={() => addPayment(b.booking_id, b.total_amount_display, b.amount_paid_display, b.down_payment_display)}
                             className="p-1.5 bg-[#B8860B] text-white hover:bg-[#9a7009] rounded-lg transition-colors"
                             title="Add Payment"
+                            disabled={b.payment_status === 'Refunded' || b.payment_status === 'Refund Pending'}
                           >
                             <PlusCircle size={14} />
                           </button>
-                          {b.amount_paid_display > 0 && (
+                          {b.amount_paid_display > 0 && b.payment_status !== 'Refunded' && b.payment_status !== 'Refund Pending' && (
                             <button
                               onClick={() => clearPayment(b.booking_id, b.total_amount_display)}
                               className="p-1.5 bg-red-500 text-white hover:bg-red-600 rounded-lg transition-colors"
@@ -445,10 +502,19 @@ const AdminBookings = () => {
                         )}
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold text-slate-400 ml-4">Balance:</span>
-                          <span className={`text-xs font-bold ${b.remaining_balance_display > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          <span className={`text-xs font-bold ${
+                            b.remaining_balance_display > 0 ? 'text-red-600' : 
+                            b.payment_status === 'Refunded' ? 'text-purple-600' : 'text-green-600'
+                          }`}>
                             ₱{b.remaining_balance_display.toLocaleString()}
                           </span>
                         </div>
+                        {b.refund_amount > 0 && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <RefreshCw size={10} className="text-purple-500" />
+                            <span className="text-[8px] text-purple-600">Refunded: ₱{b.refund_amount.toLocaleString()}</span>
+                          </div>
+                        )}
                         {b.payment_method && b.payment_method !== 'NULL' && b.payment_method !== null && (
                           <div className="flex items-center gap-1 mt-1">
                             <CreditCard size={10} className="text-slate-400" />
@@ -460,6 +526,11 @@ const AdminBookings = () => {
                             Paid: {new Date(b.payment_date).toLocaleDateString()}
                           </div>
                         )}
+                        {b.refund_date && (
+                          <div className="text-[8px] text-purple-300">
+                            Refunded: {new Date(b.refund_date).toLocaleDateString()}
+                          </div>
+                        )}
                       </div>
                     </td>
 
@@ -469,7 +540,10 @@ const AdminBookings = () => {
                           {b.booking_status || 'Pending'}
                         </span>
                         <span className={`w-fit px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${getPaymentStatusClass(b.payment_status)}`}>
-                          {b.payment_status === 'Paid' ? 'PAID' : b.payment_status === 'Downpayment' ? 'DOWNPAYMENT' : 'UNPAID'}
+                          {b.payment_status === 'Paid' ? 'PAID' : 
+                           b.payment_status === 'Downpayment' ? 'DOWNPAYMENT' : 
+                           b.payment_status === 'Refund Pending' ? 'REFUND PENDING' :
+                           b.payment_status === 'Refunded' ? 'REFUNDED' : 'UNPAID'}
                         </span>
                         
                         {b.transactions?.[0]?.proof_of_payment && (
@@ -484,35 +558,47 @@ const AdminBookings = () => {
                     </td>
 
                     <td className="p-5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {b.booking_status !== 'Approved' && b.booking_status !== 'APPROVED' && 
-                         b.booking_status !== 'Cancelled' && b.booking_status !== 'CANCELLED' && (
-                          <>
-                            <button
-                              onClick={() => handleApproveBooking(b.booking_id)}
-                              className="p-2 bg-slate-50 hover:bg-green-50 text-slate-400 hover:text-green-600 rounded-xl transition-colors"
-                              title="Approve Booking"
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleCancelBooking(b.booking_id)}
-                              className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-colors"
-                              title="Cancel Booking"
-                            >
-                              <X size={16} />
-                            </button>
-                          </>
-                        )}
-                        {(b.booking_status === 'Approved' || b.booking_status === 'APPROVED') && (
-                          <span className="text-[9px] text-green-600 font-bold uppercase">Approved</span>
-                        )}
-                        {(b.booking_status === 'Cancelled' || b.booking_status === 'CANCELLED') && (
-                          <span className="text-[9px] text-red-600 font-bold uppercase">Cancelled</span>
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center justify-end gap-2">
+                          {b.booking_status !== 'Approved' && b.booking_status !== 'APPROVED' && 
+                           b.booking_status !== 'Cancelled' && b.booking_status !== 'CANCELLED' && (
+                            <>
+                              <button
+                                onClick={() => handleApproveBooking(b.booking_id)}
+                                className="p-2 bg-slate-50 hover:bg-green-50 text-slate-400 hover:text-green-600 rounded-xl transition-colors"
+                                title="Approve Booking"
+                              >
+                                <Check size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleCancelBooking(b.booking_id)}
+                                className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-colors"
+                                title="Cancel Booking"
+                              >
+                                <X size={16} />
+                              </button>
+                            </>
+                          )}
+                          {(b.booking_status === 'Approved' || b.booking_status === 'APPROVED') && (
+                            <span className="text-[9px] text-green-600 font-bold uppercase">Approved</span>
+                          )}
+                          {(b.booking_status === 'Cancelled' || b.booking_status === 'CANCELLED') && (
+                            <span className="text-[9px] text-red-600 font-bold uppercase">Cancelled</span>
+                          )}
+                        </div>
+                        
+                        {b.payment_status === 'Refund Pending' && (
+                          <button
+                            onClick={() => handleMarkAsRefunded(b)}
+                            className="mt-2 px-3 py-1.5 bg-purple-500 text-white rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-purple-600 transition-all flex items-center gap-1"
+                          >
+                            <RefreshCw size={12} />
+                            Mark as Refunded
+                          </button>
                         )}
                       </div>
                     </td>
-                   </tr>
+                  </tr>
                 ))
               ) : (
                 <tr>

@@ -29,7 +29,6 @@ const BookNow = () => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [bookedEventDates, setBookedEventDates] = useState([]);
   const [blockedDates, setBlockedDates] = useState([]);
-  const [hasExistingBooking, setHasExistingBooking] = useState(false);
   const [occupiedAppointmentSlots, setOccupiedAppointmentSlots] = useState({});
   const [fullAppointmentDates, setFullAppointmentDates] = useState([]);
 
@@ -39,6 +38,26 @@ const BookNow = () => {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const startTimeOptions = [
+    { value: "09:00", label: "9:00 AM" },
+    { value: "10:00", label: "10:00 AM" },
+    { value: "11:00", label: "11:00 AM" },
+    { value: "12:00", label: "12:00 PM" },
+    { value: "13:00", label: "1:00 PM" },
+    { value: "14:00", label: "2:00 PM" },
+    { value: "15:00", label: "3:00 PM" }
+  ];
+
+  const allEndTimeOptions = [
+    { value: "11:00", label: "11:00 AM" },
+    { value: "12:00", label: "12:00 PM" },
+    { value: "13:00", label: "1:00 PM" },
+    { value: "14:00", label: "2:00 PM" },
+    { value: "15:00", label: "3:00 PM" },
+    { value: "16:00", label: "4:00 PM" },
+    { value: "17:00", label: "5:00 PM" }
+  ];
 
   const appointmentTimeOptions = [
     { value: "09:00", label: "9:00 AM - 11:00 AM", slot: 1 },
@@ -128,21 +147,6 @@ const BookNow = () => {
         }
       });
       setFullAppointmentDates(fullDates);
-    }
-    
-    if (userId) {
-      const { data: userBookings, error: userError } = await supabase
-        .from("bookings")
-        .select("booking_id, booking_status, event_date")
-        .eq("user_id", userId)
-        .neq("booking_status", "Cancelled")
-        .neq("booking_status", "Completed");
-      
-      if (!userError && userBookings && userBookings.length > 0) {
-        setHasExistingBooking(true);
-      } else {
-        setHasExistingBooking(false);
-      }
     }
   }, [event_id, formatDateToYMD]);
 
@@ -246,12 +250,6 @@ const BookNow = () => {
         return;
       }
 
-      if (hasExistingBooking) {
-        setAlertMessage("You already have an active booking. You cannot book another event until your current booking is completed or cancelled.");
-        setIsSubmitting(false);
-        return;
-      }
-
       if (!formData.event_date) {
         setAlertMessage("Please select an event date.");
         setIsSubmitting(false);
@@ -277,8 +275,8 @@ const BookNow = () => {
       }
 
       const totalPax = parseInt(formData.total_pax);
-      if (isNaN(totalPax) || totalPax < 50) {
-        setAlertMessage("Total guests must be at least 50 Pax.");
+      if (isNaN(totalPax) || totalPax < 50 || totalPax > 100) {
+        setAlertMessage("Total guests must be between 50 and 100 Pax.");
         setIsSubmitting(false);
         return;
       }
@@ -341,6 +339,15 @@ const BookNow = () => {
         return;
       }
 
+      const startHour = parseInt(formData.start_time.split(':')[0]);
+      const endHour = parseInt(formData.end_time.split(':')[0]);
+      
+      if (endHour - startHour < 2) {
+        setAlertMessage("Event duration must be at least 2 hours.");
+        setIsSubmitting(false);
+        return;
+      }
+
       const { data: existingAppointments, error: checkError } = await supabase
         .from("bookings")
         .select("booking_id")
@@ -377,12 +384,6 @@ const BookNow = () => {
 
       const formattedStartTime = `${formData.start_time}:00`;
       const formattedEndTime = `${formData.end_time}:00`;
-
-      if (formattedStartTime >= formattedEndTime) {
-        setAlertMessage("Invalid Time: The end time must be later than the start time.");
-        setIsSubmitting(false);
-        return;
-      }
 
       const { data: existingBookings, error: fetchError } = await supabase
         .from("bookings")
@@ -1028,6 +1029,7 @@ const BookNow = () => {
                     <input 
                       type="number" 
                       min="50"
+                      max="100"
                       required
                       placeholder="50"
                       value={formData.total_pax}
@@ -1035,7 +1037,7 @@ const BookNow = () => {
                       className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all"
                     />
                   </div>
-                  <p className="text-[8px] text-slate-400 mt-1">Minimum 50 Pax required</p>
+                  <p className="text-[8px] text-slate-400 mt-1">Minimum 50 Pax | Maximum 100 Pax</p>
                 </div>
               </div>
 
@@ -1047,20 +1049,27 @@ const BookNow = () => {
                     <select
                       required
                       value={formData.start_time}
-                      onChange={(e) => setFormData({...formData, start_time: e.target.value})}
+                      onChange={(e) => {
+                        const newStartTime = e.target.value;
+                        let defaultEndTime = "";
+                        if (newStartTime) {
+                          const startHour = parseInt(newStartTime.split(':')[0]);
+                          const minEndHour = startHour + 2;
+                          defaultEndTime = `${minEndHour.toString().padStart(2, '0')}:00`;
+                        }
+                        setFormData({...formData, start_time: newStartTime, end_time: defaultEndTime});
+                      }}
                       className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all appearance-none"
                     >
                       <option value="">Select start time</option>
-                      <option value="09:00">9:00 AM</option>
-                      <option value="10:00">10:00 AM</option>
-                      <option value="11:00">11:00 AM</option>
-                      <option value="12:00">12:00 PM</option>
-                      <option value="13:00">1:00 PM</option>
-                      <option value="14:00">2:00 PM</option>
-                      <option value="15:00">3:00 PM</option>
-                      <option value="16:00">4:00 PM</option>
+                      {startTimeOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
+                  <p className="text-[8px] text-slate-400 mt-1">Last start time is 3:00 PM</p>
                 </div>
 
                 <div className="relative">
@@ -1072,18 +1081,24 @@ const BookNow = () => {
                       value={formData.end_time}
                       onChange={(e) => setFormData({...formData, end_time: e.target.value})}
                       className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all appearance-none"
+                      disabled={!formData.start_time}
                     >
                       <option value="">Select end time</option>
-                      <option value="10:00">10:00 AM</option>
-                      <option value="11:00">11:00 AM</option>
-                      <option value="12:00">12:00 PM</option>
-                      <option value="13:00">1:00 PM</option>
-                      <option value="14:00">2:00 PM</option>
-                      <option value="15:00">3:00 PM</option>
-                      <option value="16:00">4:00 PM</option>
-                      <option value="17:00">5:00 PM</option>
+                      {(() => {
+                        if (!formData.start_time) return null;
+                        const startHour = parseInt(formData.start_time.split(':')[0]);
+                        const minEndHour = startHour + 2;
+                        return allEndTimeOptions
+                          .filter(option => parseInt(option.value.split(':')[0]) >= minEndHour)
+                          .map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ));
+                      })()}
                     </select>
                   </div>
+                  <p className="text-[8px] text-slate-400 mt-1">Minimum 2 hours duration</p>
                 </div>
               </div>
             </div>

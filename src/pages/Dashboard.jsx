@@ -12,15 +12,12 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 
 import ClientPayment from "../components/ClientPayments";
 import ClientProfile from "../components/ClientProfile";
 import BookingReceipt from "../components/BookingReceipts";
-
-import bapImg from "../assets/BAP.jpg";
-import wedImg from "../assets/WED.jpg";
-import venImg from "../assets/VEN.jpg";
 
 const ClientDashboard = () => {
   const [user, setUser] = useState(null);
@@ -85,6 +82,9 @@ const ClientDashboard = () => {
       }
       else if (activeElement.classList.contains("view-receipt-btn")) {
         textToRead = "View Receipt button. Press Enter to see full receipt.";
+      }
+      else if (activeElement.classList.contains("cancel-booking-btn")) {
+        textToRead = "Cancel Booking button. Press Enter to cancel this booking.";
       }
       else if (activeElement.getAttribute("aria-label")) {
         textToRead = activeElement.getAttribute("aria-label");
@@ -192,25 +192,15 @@ const ClientDashboard = () => {
             }
           }
           
-          let eventImage = coverImage;
-          
-          if (!eventImage) {
-            const name = event.event_name.toLowerCase();
-            if (name.includes("wedding")) {
-              eventImage = wedImg;
-            } else if (name.includes("baptismal")) {
-              eventImage = bapImg;
-            } else {
-              eventImage = venImg;
-            }
-          }
+          // ✅ WALA NANG FALLBACK! Kapag walang coverImage, null lang.
+          // Hindi na gagamit ng default images.
           
           return {
             id: event.event_id,
             title: event.event_name,
             price: `₱${Number(event.amount_per_pax).toLocaleString()}.00`,
             price_raw: Number(event.amount_per_pax),
-            image: eventImage,
+            image: coverImage, // Pwedeng null kung walang image
             all_images: allImages,
             details: event.event_description || `${event.event_name}`,
             ariaLabel: `${event.event_name} package, price ${event.amount_per_pax} pesos`
@@ -511,6 +501,46 @@ const ClientDashboard = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const handleCancelBooking = async (booking) => {
+    if (!window.confirm(`Are you sure you want to cancel your booking on ${new Date(booking.event_date).toLocaleDateString()}? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      const hasPayment = booking.amount_paid > 0;
+      
+      const { error } = await supabase
+        .from("bookings")
+        .update({ 
+          booking_status: "Cancelled",
+          payment_status: hasPayment ? "Refund Pending" : "Cancelled"
+        })
+        .eq("booking_id", booking.booking_id);
+      
+      if (error) throw error;
+      
+      if (hasPayment) {
+        await supabase.from("notifications").insert([
+          {
+            booking_id: booking.booking_id,
+            is_read: false,
+            message: `REFUND REQUEST: Client cancelled booking #${booking.booking_id}. Amount paid: ₱${booking.amount_paid.toLocaleString()}. Please process refund.`,
+          }
+        ]);
+        alert("Booking cancelled. Refund request has been sent to admin.");
+      } else {
+        alert("Booking cancelled successfully.");
+      }
+      
+      await loadUserData();
+      setRefreshTrigger(prev => prev + 1);
+      
+    } catch (error) {
+      console.error("Cancel error:", error);
+      alert("Error cancelling booking: " + error.message);
+    }
+  };
+
   const nextImage = () => {
     if (selectedPackage && selectedPackage.all_images && selectedPackage.all_images.length > 0) {
       setCurrentImageIndex((prev) => (prev + 1) % selectedPackage.all_images.length);
@@ -684,21 +714,20 @@ const ClientDashboard = () => {
                       }
                     }}
                   >
-                    <img
-                      src={pkg.image}
-                      alt={pkg.title}
-                      className="h-64 w-full object-cover rounded-2xl mb-6"
-                      onError={(e) => {
-                        const name = pkg.title.toLowerCase();
-                        if (name.includes("wedding")) {
-                          e.target.src = wedImg;
-                        } else if (name.includes("baptismal")) {
-                          e.target.src = bapImg;
-                        } else {
-                          e.target.src = venImg;
-                        }
-                      }}
-                    />
+                    {/* ✅ BAGONG IMAGE SECTION: Kapag walang image, "No Image" ang display */}
+                    <div className="h-64 w-full rounded-2xl mb-6 bg-slate-100 flex items-center justify-center overflow-hidden">
+                      {pkg.image ? (
+                        <img
+                          src={pkg.image}
+                          alt={pkg.title}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center text-slate-400 text-[10px] font-bold uppercase p-4">
+                          📷 No Image Available
+                        </div>
+                      )}
+                    </div>
 
                     <h3 className="package-title text-xl font-black uppercase mb-3">
                       {pkg.title}
@@ -742,81 +771,99 @@ const ClientDashboard = () => {
 
           {user && myBookings.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {myBookings.map((item) => (
-                <div
-                  key={item.booking_id}
-                  className="booking-card bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm"
-                  tabIndex={0}
-                  aria-label={`Booking ${item.booking_status}, date ${new Date(item.event_date).toLocaleDateString()}`}
-                >
+              {myBookings.map((item) => {
+                const isCancellable = item.booking_status !== "Cancelled" && item.booking_status !== "Completed";
+                
+                return (
                   <div
-                    className={`booking-status px-5 py-2 text-[8px] font-black uppercase ${
-                      item.booking_status === "Approved"
-                        ? "bg-green-500"
-                        : item.booking_status === "Pending"
-                        ? "bg-yellow-500"
-                        : "bg-orange-400"
-                    } text-white inline-block mb-4`}
+                    key={item.booking_id}
+                    className="booking-card bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm"
+                    tabIndex={0}
+                    aria-label={`Booking ${item.booking_status}, date ${new Date(item.event_date).toLocaleDateString()}`}
                   >
-                    {item.booking_status || "PENDING"}
-                  </div>
-
-                  <h4 className="booking-date text-lg font-black uppercase">
-                    {new Date(item.event_date).toLocaleDateString()}
-                  </h4>
-
-                  <div className="flex items-center gap-4 mt-4">
-                    <Clock size={14} className="text-slate-400" />
-                    <span className="text-[10px] font-bold uppercase">
-                      {item.appointment_time} - {item.end_time}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                    <div>
-                      <p className="text-[9px] text-slate-400">Total Amount</p>
-                      <p className="font-black text-[#B8860B]">₱{item.amount?.toLocaleString() || 0}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] text-slate-400">Payment Status</p>
-                      <p className={`font-bold text-xs ${
-                        item.payment_status === "Paid" ? "text-green-600" :
-                        item.payment_status === "Partial" ? "text-yellow-600" : "text-red-600"
-                      }`}>
-                        {item.payment_status || "Pending"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 mt-4">
-                    <button
-                      onClick={() => {
-                        setSelectedBooking(item);
-                        setShowReceiptModal(true);
-                      }}
-                      className="view-receipt-btn flex-1 bg-[#B8860B] text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-[#9a7009] transition-all flex items-center justify-center gap-1"
-                      aria-label="View receipt"
+                    <div
+                      className={`booking-status px-5 py-2 text-[8px] font-black uppercase ${
+                        item.booking_status === "Approved"
+                          ? "bg-green-500"
+                          : item.booking_status === "Cancelled"
+                          ? "bg-red-500"
+                          : item.booking_status === "Pending"
+                          ? "bg-yellow-500"
+                          : "bg-orange-400"
+                      } text-white inline-block mb-4`}
                     >
-                      <FileText size={12} />
-                      View Receipt
-                    </button>
-                    {item.payment_status !== "Paid" && (
+                      {item.booking_status || "PENDING"}
+                    </div>
+
+                    <h4 className="booking-date text-lg font-black uppercase">
+                      {new Date(item.event_date).toLocaleDateString()}
+                    </h4>
+
+                    <div className="flex items-center gap-4 mt-4">
+                      <Clock size={14} className="text-slate-400" />
+                      <span className="text-[10px] font-bold uppercase">
+                        Appt: {item.appointment_time} | Event: {item.start_time} - {item.end_time}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                      <div>
+                        <p className="text-[9px] text-slate-400">Total Amount</p>
+                        <p className="font-black text-[#B8860B]">₱{item.amount?.toLocaleString() || 0}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] text-slate-400">Payment Status</p>
+                        <p className={`font-bold text-xs ${
+                          item.payment_status === "Paid" ? "text-green-600" :
+                          item.payment_status === "Partial" ? "text-yellow-600" : 
+                          item.payment_status === "Refund Pending" ? "text-orange-600" :
+                          item.payment_status === "Refunded" ? "text-blue-600" : "text-red-600"
+                        }`}>
+                          {item.payment_status || "Pending"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-4">
                       <button
-                        onClick={() =>
-                          setPaymentModal({
-                            open: true,
-                            booking: item,
-                          })
-                        }
-                        className="flex-1 bg-black text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-gray-800 transition-all"
-                        aria-label={`Pay for booking on ${new Date(item.event_date).toLocaleDateString()}`}
+                        onClick={() => {
+                          setSelectedBooking(item);
+                          setShowReceiptModal(true);
+                        }}
+                        className="view-receipt-btn flex-1 bg-[#B8860B] text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-[#9a7009] transition-all flex items-center justify-center gap-1"
+                        aria-label="View receipt"
                       >
-                        Pay Now
+                        <FileText size={12} />
+                        View Receipt
                       </button>
-                    )}
+                      {item.payment_status !== "Paid" && item.payment_status !== "Refunded" && item.booking_status !== "Cancelled" && (
+                        <button
+                          onClick={() =>
+                            setPaymentModal({
+                              open: true,
+                              booking: item,
+                            })
+                          }
+                          className="flex-1 bg-black text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-gray-800 transition-all"
+                          aria-label={`Pay for booking on ${new Date(item.event_date).toLocaleDateString()}`}
+                        >
+                          Pay Now
+                        </button>
+                      )}
+                      {isCancellable && item.booking_status !== "Cancelled" && (
+                        <button
+                          onClick={() => handleCancelBooking(item)}
+                          className="cancel-booking-btn flex-1 bg-red-500 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-red-600 transition-all flex items-center justify-center gap-1"
+                          aria-label="Cancel booking"
+                        >
+                          <Trash2 size={12} />
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="bg-white p-12 rounded-[2rem] border border-slate-100 text-center">
@@ -869,7 +916,6 @@ const ClientDashboard = () => {
               <X size={18} />
             </button>
 
-            {/* Image Gallery Section */}
             <div className="mb-6">
               <h3 className="text-sm font-bold uppercase text-slate-400 mb-3">GALLERY</h3>
               
@@ -925,11 +971,11 @@ const ClientDashboard = () => {
                   </p>
                 </div>
               ) : (
-                <img
-                  src={selectedPackage.image}
-                  alt={selectedPackage.title}
-                  className="w-full h-96 object-cover rounded-2xl"
-                />
+                <div className="h-96 bg-slate-100 rounded-2xl flex items-center justify-center">
+                  <div className="text-center text-slate-400 text-sm font-bold uppercase p-4">
+                    📷 No Images Available for this Package
+                  </div>
+                </div>
               )}
             </div>
 
