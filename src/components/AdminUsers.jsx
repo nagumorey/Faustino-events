@@ -44,7 +44,7 @@ const AdminUsers = () => {
                 <th className="p-4">Name</th>
                 <th className="p-4">Email</th>
                 <th className="p-4">Status</th>
-              袱
+              
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-white/10">

@@ -1,19 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
-import { X, Mic, Volume2, Keyboard, Upload, Image as ImageIcon, Trash2, Star, Plus } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Trash2, Star } from 'lucide-react';
 
 const AdminEvents = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [focusedElement, setFocusedElement] = useState("");
-  const [voiceFeedback, setVoiceFeedback] = useState("");
   const [uploading, setUploading] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [eventImages, setEventImages] = useState([]);
-  const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     event_name: '',
@@ -24,76 +20,6 @@ const AdminEvents = () => {
   });
 
   const supabaseUrl = 'https://ekqixbskebdsjftlprwm.supabase.co';
-
-  const speak = (text) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-    setVoiceFeedback(text);
-    setTimeout(() => setVoiceFeedback(""), 2000);
-  };
-
-  const readFocusedElement = () => {
-    const activeElement = document.activeElement;
-    let textToRead = "";
-
-    if (activeElement) {
-      if (activeElement.classList.contains("mic-btn")) {
-        textToRead = "Microphone button. Press Enter to activate voice commands.";
-      }
-      else if (activeElement.classList.contains("back-btn")) {
-        textToRead = "Back to Dashboard button. Press Enter to go back.";
-      }
-      else if (activeElement.classList.contains("add-btn")) {
-        textToRead = "Add New Package button. Press Enter to open form.";
-      }
-      else if (activeElement.classList.contains("edit-btn")) {
-        const eventName = activeElement.getAttribute("data-event-name");
-        textToRead = `Edit ${eventName} button. Press Enter to edit this event.`;
-      }
-      else if (activeElement.classList.contains("manage-link")) {
-        const eventName = activeElement.getAttribute("data-event-name");
-        textToRead = `Manage ${eventName} button. Press Enter to manage this event.`;
-      }
-      else if (activeElement.classList.contains("close-modal-btn")) {
-        textToRead = "Close button. Press Enter to close the form.";
-      }
-      else if (activeElement.classList.contains("package-card")) {
-        const name = activeElement.querySelector(".event-name")?.innerText;
-        const status = activeElement.querySelector(".event-status")?.innerText;
-        textToRead = `${name}, status ${status}. Press Tab to navigate options.`;
-      }
-      else if (activeElement.classList.contains("submit-btn")) {
-        textToRead = "Save Package button. Press Enter to create new package.";
-      }
-      else if (activeElement.classList.contains("upload-btn")) {
-        textToRead = "Upload Images button. Press Enter to select images.";
-      }
-      else if (activeElement.tagName === "INPUT") {
-        const label = activeElement.getAttribute("placeholder") || activeElement.getAttribute("name");
-        const value = activeElement.value;
-        textToRead = `${label} input field. Current value: ${value || "empty"}`;
-      }
-      else if (activeElement.tagName === "SELECT") {
-        const label = activeElement.getAttribute("name");
-        const value = activeElement.value;
-        textToRead = `${label} selection. Current value: ${value}`;
-      }
-      else if (activeElement.tagName === "TEXTAREA") {
-        const label = activeElement.getAttribute("placeholder");
-        textToRead = `${label} text area`;
-      }
-      
-      if (textToRead) {
-        speak(textToRead);
-        setFocusedElement(textToRead);
-        setTimeout(() => setFocusedElement(""), 2000);
-      }
-    }
-  };
 
   const uploadImages = async (files) => {
     if (!files || files.length === 0) return [];
@@ -122,7 +48,6 @@ const AdminEvents = () => {
       return uploadedUrls;
     } catch (error) {
       console.error("Upload error:", error);
-      speak("Image upload failed");
       setUploading(false);
       return [];
     }
@@ -176,7 +101,6 @@ const AdminEvents = () => {
       if (editingEvent) {
         await fetchEventImages(editingEvent.event_id);
       }
-      speak("Image deleted");
     }
   };
 
@@ -195,119 +119,8 @@ const AdminEvents = () => {
     
     if (!error) {
       await fetchEventImages(editingEvent.event_id);
-      speak("Cover image updated");
     }
   };
-
-  const executeCommand = (command) => {
-    console.log("Command:", command);
-
-    if (command === "mic" || command === "microphone") {
-      startVoice();
-    }
-    else if (command === "add" || command === "add package") {
-      setIsModalOpen(true);
-      speak("Add new package form opened");
-    }
-    else if (command === "close" || command === "close modal") {
-      if (isModalOpen) {
-        setIsModalOpen(false);
-        setEditingEvent(null);
-        setEventImages([]);
-        setFormData({
-          event_name: '',
-          venue: '',
-          amount_per_pax: '',
-          event_status: 'Available',
-          event_description: '',
-        });
-        speak("Form closed");
-      }
-    }
-    else if (command === "back" || command === "dashboard") {
-      speak("Going back to dashboard");
-      setTimeout(() => {
-        window.location.href = "/AdminDashboard";
-      }, 500);
-    }
-    else if (command === "help") {
-      speak("Commands: mic, add package, close, back dashboard, help");
-    }
-  };
-
-  const startVoice = () => {
-    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert("Speech recognition not supported");
-      return;
-    }
-
-    if (isListening && recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-      setIsListening(false);
-      speak("Voice off");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      speak("Listening");
-    };
-
-    recognition.onresult = (event) => {
-      const command = event.results[0][0].transcript.toLowerCase().trim();
-      executeCommand(command);
-      recognition.stop();
-      setIsListening(false);
-    };
-
-    recognition.onerror = (event) => {
-      console.log("Error:", event.error);
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
-    recognitionRef.current = recognition;
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Tab") {
-        setTimeout(() => readFocusedElement(), 100);
-      }
-      else if (e.key === "Enter") {
-        const activeElement = document.activeElement;
-        if (activeElement && activeElement.click) {
-          activeElement.click();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    
-    const allInteractive = document.querySelectorAll("button, a, input, select, textarea, [tabindex]");
-    allInteractive.forEach(el => {
-      el.addEventListener("focus", readFocusedElement);
-    });
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      allInteractive.forEach(el => {
-        el.removeEventListener("focus", readFocusedElement);
-      });
-    };
-  }, [isModalOpen, events]);
 
   const fetchEvents = async () => {
     try {
@@ -343,14 +156,13 @@ const AdminEvents = () => {
 
   useEffect(() => {
     fetchEvents();
-    speak("Admin Events page loaded. Press Tab to navigate, or say help for commands.");
   }, []);
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     });
   };
 
@@ -366,7 +178,6 @@ const AdminEvents = () => {
         window.tempImages = window.tempImages || [];
         window.tempImages.push(...uploadedUrls);
       }
-      speak(`${uploadedUrls.length} images uploaded`);
     }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -384,7 +195,6 @@ const AdminEvents = () => {
     });
     await fetchEventImages(event.event_id);
     setIsModalOpen(true);
-    speak(`Editing ${event.event_name}`);
   };
 
   const getCoverImage = (event) => {
@@ -394,7 +204,6 @@ const AdminEvents = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    speak("Updating package");
     setUploading(true);
     
     try {
@@ -419,7 +228,6 @@ const AdminEvents = () => {
         window.tempImages = [];
       }
 
-      speak("Package updated successfully");
       alert('Event Package Updated Successfully!');
       setIsModalOpen(false);
       setEditingEvent(null);
@@ -434,7 +242,6 @@ const AdminEvents = () => {
       await fetchEvents();
     } catch (err) {
       console.error("Update error:", err);
-      speak("Error updating package");
       alert('Error updating package: ' + err.message);
     } finally {
       setUploading(false);
@@ -448,7 +255,6 @@ const AdminEvents = () => {
       return;
     }
     
-    speak("Creating new package");
     setUploading(true);
     
     try {
@@ -474,7 +280,6 @@ const AdminEvents = () => {
         window.tempImages = [];
       }
 
-      speak("Package created successfully");
       alert('Event Package Created Successfully!');
       setIsModalOpen(false);
       setFormData({
@@ -487,7 +292,6 @@ const AdminEvents = () => {
       await fetchEvents();
     } catch (err) {
       console.error("Insert error:", err);
-      speak("Error creating package");
       alert('Error inserting package: ' + err.message);
     } finally {
       setUploading(false);
@@ -509,15 +313,6 @@ const AdminEvents = () => {
           <h1 className="text-3xl font-serif font-bold bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">Event Packages</h1>
           
           <div className="flex gap-3">
-            <button 
-              onClick={startVoice}
-              className="mic-btn px-3 py-2 bg-white/10 backdrop-blur-sm text-yellow-500 rounded-lg hover:bg-yellow-500 hover:text-black transition-all border border-white/20"
-              tabIndex={0}
-              aria-label="Microphone button"
-            >
-              <Mic size={16} />
-            </button>
-
             <Link 
               to="/AdminDashboard" 
               className="back-btn px-4 py-2 bg-yellow-500 text-black text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-500/20"
