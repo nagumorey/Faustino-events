@@ -322,28 +322,8 @@ const AdminDashboard = () => {
     };
   }, [navigate]);
 
-  const handleToggleDropdown = async () => {
-    const nextState = !isNotifOpen;
-    setIsNotifOpen(nextState);
-
-    if (nextState) {
-      const unreadNotifications = notifications.filter((n) => !n.is_read);
-      
-      if (unreadNotifications.length > 0) {
-        const unreadIds = unreadNotifications.map((n) => n.notification_id);
-
-        const { error } = await supabase
-          .from("notifications")
-          .update({ is_read: true })
-          .in("notification_id", unreadIds);
-
-        if (!error) {
-          setNotifications((prev) =>
-            prev.map((n) => (unreadIds.includes(n.notification_id) ? { ...n, is_read: true } : n))
-          );
-        }
-      }
-    }
+  const handleToggleDropdown = () => {
+    setIsNotifOpen(!isNotifOpen);
   };
 
   const markAsRead = async (id) => {
@@ -355,6 +335,22 @@ const AdminDashboard = () => {
     if (!error) {
       setNotifications((prev) =>
         prev.map((n) => (n.notification_id === id ? { ...n, is_read: true } : n))
+      );
+    }
+  };
+
+  const markAllAsRead = async () => {
+    const unreadIds = notifications.filter(n => !n.is_read).map(n => n.notification_id);
+    if (unreadIds.length === 0) return;
+    
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .in("notification_id", unreadIds);
+
+    if (!error) {
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, is_read: true }))
       );
     }
   };
@@ -385,7 +381,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#16213e] flex font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-black/40 backdrop-blur-xl p-6 flex flex-col shadow-xl border-r border-yellow-500/20">
+      <aside className="w-64 bg-black/40 backdrop-blur-xl p-6 flex flex-col shadow-xl border-r border-yellow-500/20 z-20">
         <div className="mb-10 px-2">
           <h2 className="font-black tracking-tighter text-xl bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">FAUSTINO'S</h2>
           <p className="text-[10px] text-gray-500 font-bold tracking-widest mt-1 uppercase">Admin Panel</p>
@@ -417,9 +413,9 @@ const AdminDashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-8 overflow-y-auto relative">
         {/* Header */}
-        <header className="flex justify-between items-center mb-10 bg-black/40 backdrop-blur-xl border border-yellow-500/20 p-4 rounded-xl shadow-lg">
+        <header className="flex justify-between items-center mb-10 bg-black/40 backdrop-blur-xl border border-yellow-500/20 p-4 rounded-xl shadow-lg relative z-10">
           <h2 className="text-xs font-bold tracking-[0.3em] uppercase text-gray-400 ml-4">EMS Dashboard</h2>
           <div className="mr-4 flex items-center gap-6">
             <div className="relative">
@@ -429,22 +425,31 @@ const AdminDashboard = () => {
               >
                 <Bell size={18} className="text-gray-400 hover:text-yellow-500 transition-colors" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-black text-white ring-2 ring-black/40">
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-black text-white ring-2 ring-black/40">
                     {unreadCount}
                   </span>
                 )}
               </button>
 
+              {/* Notification Dropdown - Fixed z-index and position */}
               {isNotifOpen && (
-                <div className="absolute right-0 mt-4 w-80 max-h-96 overflow-y-auto bg-[#1a1a2e]/90 backdrop-blur-xl text-white rounded-2xl border border-yellow-500/30 shadow-2xl p-4 space-y-3 z-50">
-                  <div className="flex items-center justify-between border-b border-yellow-500/20 pb-2">
+                <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-y-auto bg-[#1a1a2e] backdrop-blur-xl text-white rounded-2xl border border-yellow-500/30 shadow-2xl z-[9999]">
+                  <div className="sticky top-0 bg-[#1a1a2e] p-4 border-b border-yellow-500/20 flex justify-between items-center">
                     <h4 className="text-[10px] font-black uppercase tracking-wider text-yellow-500">Notifications</h4>
+                    {unreadCount > 0 && (
+                      <button 
+                        onClick={markAllAsRead}
+                        className="text-[8px] text-yellow-500 hover:text-yellow-400 transition-colors"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
                   </div>
-                  {notifications.length === 0 ? (
-                    <p className="text-gray-400 text-xs py-4 text-center font-medium">No notifications yet.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {notifications.map((notif) => (
+                  <div className="p-3 space-y-2 max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <p className="text-gray-400 text-xs py-4 text-center font-medium">No notifications yet.</p>
+                    ) : (
+                      notifications.map((notif) => (
                         <div 
                           key={notif.notification_id} 
                           className={`p-3 rounded-xl border transition-all flex items-start justify-between gap-3 ${
@@ -454,7 +459,7 @@ const AdminDashboard = () => {
                           }`}
                         >
                           <div className="space-y-1 flex-1">
-                            <p className="text-xs font-bold text-white leading-snug">{notif.message}</p>
+                            <p className="text-xs font-bold text-white leading-snug break-words">{notif.message}</p>
                             <p className="text-[9px] font-medium text-gray-400">
                               {new Date(notif.created_at).toLocaleDateString()} at {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
@@ -468,9 +473,9 @@ const AdminDashboard = () => {
                             </button>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
               )}
             </div>
