@@ -121,18 +121,18 @@ const ClientPayment = ({ bookingId, totalAmount, onPaymentSuccess }) => {
 
   if (success) {
     return (
-      <div className="p-8 bg-white rounded-2xl border border-green-100 shadow-sm text-center">
-        <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
-        <h3 className="text-lg font-bold text-slate-800">Payment Submitted</h3>
-        <p className="text-xs text-slate-500 mt-2">Your proof of payment has been received. Please wait for admin verification.</p>
+      <div className="p-8 bg-white/10 backdrop-blur-sm rounded-2xl border border-green-500/30 shadow-sm text-center">
+        <CheckCircle size={48} className="text-green-400 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-white">Payment Submitted</h3>
+        <p className="text-xs text-gray-400 mt-2">Your proof of payment has been received. Please wait for admin verification.</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleUploadAndSubmit} className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
+    <form onSubmit={handleUploadAndSubmit} className="p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 shadow-sm">
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-600 text-xs font-medium">
+        <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-2 text-red-400 text-xs font-medium">
           <AlertTriangle size={14} />
           {error}
         </div>
@@ -151,13 +151,13 @@ const ClientPayment = ({ bookingId, totalAmount, onPaymentSuccess }) => {
               }}
               className={`p-4 rounded-xl border-2 transition-all ${
                 selectedMethod?.wallet_id === method.wallet_id 
-                  ? "border-[#B8860B] bg-[#B8860B]/10" 
-                  : "border-gray-200 hover:border-gray-300"
+                  ? "border-yellow-500 bg-yellow-500/10 text-yellow-500" 
+                  : "border-white/20 text-white hover:border-yellow-500/50"
               }`}
             >
               <span className="text-2xl mb-1 block">{getMethodIcon(method.platform)}</span>
               <p className="font-bold text-sm">{method.platform}</p>
-              <p className="text-[8px] text-gray-400 mt-1 truncate">
+              <p className="text-[8px] text-gray-500 mt-1 truncate">
                 {method.platform === 'Bank Transfer' ? method.account_number?.substring(0, 15) : method.phone_number}
               </p>
             </button>
@@ -166,17 +166,17 @@ const ClientPayment = ({ bookingId, totalAmount, onPaymentSuccess }) => {
       </div>
 
       {selectedMethod && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-2xl border border-amber-100 text-center">
-          <p className="text-[10px] font-bold text-slate-500 uppercase">Send payment to {selectedMethod.platform}:</p>
-          <p className="text-xl font-black text-[#B8860B] my-2 tracking-wider select-all">
+        <div className="mb-6 p-4 bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 rounded-2xl border border-yellow-500/30 text-center">
+          <p className="text-[10px] font-bold text-gray-400 uppercase">Send payment to {selectedMethod.platform}:</p>
+          <p className="text-xl font-black text-yellow-500 my-2 tracking-wider select-all">
             {getAccountDisplay(selectedMethod)}
           </p>
-          <p className="text-[10px] font-bold text-slate-500 uppercase">Account Name: {selectedMethod.account_name}</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase">Account Name: {selectedMethod.account_name}</p>
         </div>
       )}
 
       <div className="mb-4">
-        <label className="text-xs font-bold text-slate-600 block mb-1">
+        <label className="text-xs font-bold text-gray-300 block mb-1">
           Reference Number
         </label>
         <input 
@@ -186,20 +186,20 @@ const ClientPayment = ({ bookingId, totalAmount, onPaymentSuccess }) => {
             setReferenceNo(e.target.value);
             setError('');
           }}
-          className="w-full border border-slate-200 px-4 py-3 text-sm rounded-xl outline-none focus:border-[#B8860B] focus:ring-2 focus:ring-[#B8860B]/10 font-medium transition-all" 
+          className="w-full bg-white/10 border border-white/20 px-4 py-3 text-sm rounded-xl text-white placeholder:text-gray-500 outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/10 font-medium transition-all" 
           placeholder="Enter your reference number"
           required
         />
       </div>
 
       <div className="mb-5">
-        <label className="text-xs font-bold text-slate-600 block mb-1">Proof of Payment (Screenshot)</label>
-        <div className="relative border-2 border-dashed border-slate-200 hover:border-[#B8860B] rounded-xl p-6 transition-all flex flex-col items-center justify-center bg-slate-50/50 cursor-pointer">
-          <UploadCloud size={32} className={`${file ? 'text-[#B8860B]' : 'text-slate-400'} mb-2 transition-all`} />
-          <span className="text-xs text-slate-500 font-medium text-center break-all">
+        <label className="text-xs font-bold text-gray-300 block mb-1">Proof of Payment (Screenshot)</label>
+        <div className="relative border-2 border-dashed border-white/20 hover:border-yellow-500 rounded-xl p-6 transition-all flex flex-col items-center justify-center bg-white/5 cursor-pointer">
+          <UploadCloud size={32} className={`${file ? 'text-yellow-500' : 'text-gray-500'} mb-2 transition-all`} />
+          <span className="text-xs text-gray-400 font-medium text-center break-all">
             {file ? file.name : 'Click or drag screenshot here'}
           </span>
-          <span className="text-[9px] text-slate-400 mt-1">PNG, JPG, JPEG only</span>
+          <span className="text-[9px] text-gray-500 mt-1">PNG, JPG, JPEG only</span>
           <input 
             type="file" 
             accept="image/png, image/jpeg, image/jpg"
@@ -213,19 +213,19 @@ const ClientPayment = ({ bookingId, totalAmount, onPaymentSuccess }) => {
         </div>
       </div>
 
-      <div className="mb-4 p-3 bg-gray-50 rounded-xl flex justify-between items-center">
-        <span className="text-xs font-bold text-slate-600">Amount to Pay:</span>
-        <span className="text-lg font-black text-[#B8860B]">₱{parseFloat(totalAmount).toLocaleString()}.00</span>
+      <div className="mb-4 p-3 bg-white/5 rounded-xl flex justify-between items-center border border-white/10">
+        <span className="text-xs font-bold text-gray-400">Amount to Pay:</span>
+        <span className="text-lg font-black text-yellow-500">₱{parseFloat(totalAmount).toLocaleString()}.00</span>
       </div>
 
       <button 
         type="submit" 
         disabled={uploading}
-        className="w-full bg-[#B8860B] text-white hover:bg-[#9a7209] py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
+        className="w-full bg-yellow-500 text-black hover:bg-yellow-400 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:bg-gray-500 disabled:cursor-not-allowed shadow-lg shadow-yellow-500/20"
       >
         {uploading ? (
           <>
-            <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
+            <div className="animate-spin rounded-full h-3 w-3 border-2 border-black border-t-transparent"></div>
             Processing...
           </>
         ) : (

@@ -495,331 +495,309 @@ const AdminEvents = () => {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">
-      <div className="text-xs font-black tracking-widest uppercase animate-pulse text-[#D4AF37]">
+    <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#16213e] flex items-center justify-center">
+      <div className="text-xs font-black tracking-widest uppercase animate-pulse text-yellow-500">
         Loading Faustino's Packages...
       </div>
     </div>
   );
 
   return (
-    <div className="p-8 bg-[#F8F9FA] min-h-screen font-sans relative">
-      {focusedElement && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm">
-          <Volume2 size={14} className="inline mr-2" />
-          {focusedElement}
+    <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#16213e] font-sans">
+      <div className="p-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-serif font-bold bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">Event Packages</h1>
+          
+          <div className="flex gap-3">
+            <button 
+              onClick={startVoice}
+              className="mic-btn px-3 py-2 bg-white/10 backdrop-blur-sm text-yellow-500 rounded-lg hover:bg-yellow-500 hover:text-black transition-all border border-white/20"
+              tabIndex={0}
+              aria-label="Microphone button"
+            >
+              <Mic size={16} />
+            </button>
+
+            <Link 
+              to="/AdminDashboard" 
+              className="back-btn px-4 py-2 bg-yellow-500 text-black text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-500/20"
+              tabIndex={0}
+              aria-label="Back to Dashboard button"
+            >
+              Back to Dashboard
+            </Link>
+            <button 
+              onClick={() => {
+                setIsModalOpen(true);
+                window.tempImages = [];
+              }}
+              className="add-btn bg-yellow-500 text-black px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20"
+              tabIndex={0}
+              aria-label="Add New Package button"
+            >
+              Add New Package
+            </button>
+          </div>
         </div>
-      )}
-
-      {isListening && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[#D4AF37] text-black px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg">
-          <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
-          <Mic size={14} />
-          <span className="text-xs font-bold">Say a command...</span>
-        </div>
-      )}
-
-      <div className="fixed top-20 right-4 bg-black/80 text-white p-3 rounded-xl z-40 text-xs max-w-xs">
-        <Keyboard size={14} className="inline mr-1" />
-        <span className="font-bold">Accessibility:</span>
-        <p className="mt-1">Press TAB to navigate, ENTER to select</p>
-        <p>Press MIC button or say "mic" for voice commands</p>
-        <p>Say "help" for all voice commands</p>
-      </div>
-
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-serif font-bold text-[#1e293b]">Event Packages</h1>
         
-        <div className="flex gap-3">
-          <button 
-            onClick={startVoice}
-            className="mic-btn px-3 py-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-[#D4AF37] hover:text-white transition-all"
-            tabIndex={0}
-            aria-label="Microphone button"
-          >
-            <Mic size={16} />
-          </button>
-
-          <Link 
-            to="/AdminDashboard" 
-            className="back-btn px-4 py-2 bg-slate-800 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-black transition-colors"
-            tabIndex={0}
-            aria-label="Back to Dashboard button"
-          >
-            Back to Dashboard
-          </Link>
-          <button 
-            onClick={() => {
-              setIsModalOpen(true);
-              window.tempImages = [];
-            }}
-            className="add-btn bg-black text-white px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-all"
-            tabIndex={0}
-            aria-label="Add New Package button"
-          >
-            Add New Package
-          </button>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.length > 0 ? (
-          events.map((e) => (
-            <div key={e.event_id} className="package-card bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
-              <div className="relative h-48 overflow-hidden bg-slate-100">
-                {getCoverImage(e) ? (
-                  <img 
-                    src={getCoverImage(e)} 
-                    alt={e.event_name} 
-                    className="w-full h-full object-cover" 
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
-                    <ImageIcon size={48} className="text-slate-400" />
-                  </div>
-                )}
-                <button
-                  onClick={() => handleEdit(e)}
-                  className="edit-btn absolute top-2 right-2 bg-black/70 text-white p-1.5 rounded-lg hover:bg-[#B8860B] transition-all"
-                  data-event-name={e.event_name}
-                  tabIndex={0}
-                  aria-label={`Edit ${e.event_name}`}
-                >
-                  ✏️
-                </button>
-              </div>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <span className={`event-status px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter ${
-                    e.event_status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {e.event_status || 'Unavailable'}
-                  </span>
-                </div>
-                
-                <h3 className="event-name text-xl font-bold text-slate-800 mb-1">{e.event_name}</h3>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-2">
-                  {e.venue || 'No Venue Set'}
-                </p>
-                <p className="text-xs text-slate-500 mb-4 line-clamp-2">
-                  {e.event_description || 'No description'}
-                </p>
-                
-                <div className="pt-4 border-t border-slate-50 flex justify-between items-center">
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">Price per Pax</p>
-                    <p className="text-lg font-black text-slate-900">₱{parseFloat(e.amount_per_pax || 0).toLocaleString()}</p>
-                  </div>
-                  <Link 
-                    to={`/ManageEvent/${e.event_id}`} 
-                    className="manage-link text-[10px] font-black uppercase text-blue-600 hover:underline"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {events.length > 0 ? (
+            events.map((e) => (
+              <div key={e.event_id} className="package-card bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden hover:shadow-xl hover:border-yellow-500/50 transition-all">
+                <div className="relative h-48 overflow-hidden bg-white/5">
+                  {getCoverImage(e) ? (
+                    <img 
+                      src={getCoverImage(e)} 
+                      alt={e.event_name} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/5 to-white/10">
+                      <ImageIcon size={48} className="text-gray-500" />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handleEdit(e)}
+                    className="edit-btn absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-yellow-500 hover:text-black transition-all"
                     data-event-name={e.event_name}
                     tabIndex={0}
-                    aria-label={`Manage ${e.event_name}`}
+                    aria-label={`Edit ${e.event_name}`}
                   >
-                    Manage
-                  </Link>
+                    ✏️
+                  </button>
+                </div>
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <span className={`event-status px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${
+                      e.event_status === 'Available' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    }`}>
+                      {e.event_status || 'Unavailable'}
+                    </span>
+                  </div>
+                  
+                  <h3 className="event-name text-xl font-bold text-white mb-1">{e.event_name}</h3>
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-2">
+                    {e.venue || 'No Venue Set'}
+                  </p>
+                  <p className="text-xs text-gray-400 mb-4 line-clamp-2">
+                    {e.event_description || 'No description'}
+                  </p>
+                  
+                  <div className="pt-4 border-t border-white/10 flex justify-between items-center">
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">Price per Pax</p>
+                      <p className="text-lg font-black text-yellow-500">₱{parseFloat(e.amount_per_pax || 0).toLocaleString()}</p>
+                    </div>
+                    <Link 
+                      to={`/ManageEvent/${e.event_id}`} 
+                      className="manage-link text-[10px] font-black uppercase text-yellow-500 hover:text-yellow-400 hover:underline"
+                      data-event-name={e.event_name}
+                      tabIndex={0}
+                      aria-label={`Manage ${e.event_name}`}
+                    >
+                      Manage
+                    </Link>
+                  </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="col-span-full p-20 text-center bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em]">No events in database</p>
             </div>
-          ))
-        ) : (
-          <div className="col-span-full p-20 text-center bg-white rounded-2xl border border-dashed border-slate-200">
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">No events in database</p>
+          )}
+        </div>
+
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-[#1a1a2e]/90 backdrop-blur-xl max-w-2xl w-full rounded-2xl p-8 border border-yellow-500/30 shadow-2xl relative my-8">
+              <button 
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingEvent(null);
+                  setEventImages([]);
+                  window.tempImages = [];
+                  setFormData({
+                    event_name: '',
+                    venue: '',
+                    amount_per_pax: '',
+                    event_status: 'Available',
+                    event_description: '',
+                  });
+                }}
+                className="close-modal-btn absolute right-6 top-6 text-gray-400 hover:text-yellow-500 transition-colors"
+                tabIndex={0}
+                aria-label="Close modal button"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="mb-6">
+                <h2 className="text-2xl font-black uppercase tracking-tight text-white">
+                  {editingEvent ? 'Edit Package' : 'Create New Package'}
+                </h2>
+                <div className="h-1 w-12 bg-yellow-500 mt-2"></div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2 block">Package Name</label>
+                  <input 
+                    type="text"
+                    name="event_name"
+                    required
+                    value={formData.event_name}
+                    onChange={handleInputChange}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold text-white placeholder:text-gray-500 outline-none focus:border-yellow-500 transition-all"
+                    placeholder="e.g., Baptismal Package"
+                    tabIndex={0}
+                    aria-label="Package name input"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2 block">Venue Location</label>
+                  <input 
+                    type="text"
+                    name="venue"
+                    required
+                    value={formData.venue}
+                    onChange={handleInputChange}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold text-white placeholder:text-gray-500 outline-none focus:border-yellow-500 transition-all"
+                    placeholder="e.g., Manila Hotel Garden"
+                    tabIndex={0}
+                    aria-label="Venue location input"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2 block">Price Per Pax (₱)</label>
+                  <input 
+                    type="number"
+                    name="amount_per_pax"
+                    required
+                    value={formData.amount_per_pax}
+                    onChange={handleInputChange}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold text-white placeholder:text-gray-500 outline-none focus:border-yellow-500 transition-all"
+                    placeholder="0.00"
+                    tabIndex={0}
+                    aria-label="Price per pax input"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2 block">Description</label>
+                  <textarea 
+                    name="event_description"
+                    rows="3"
+                    value={formData.event_description}
+                    onChange={handleInputChange}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold text-white placeholder:text-gray-500 outline-none focus:border-yellow-500 transition-all resize-none"
+                    placeholder="Describe the event package..."
+                    tabIndex={0}
+                    aria-label="Event description text area"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2 block">Event Images (Multiple)</label>
+                  <input 
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    tabIndex={0}
+                    aria-label="Upload multiple images"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="upload-btn w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-yellow-500 transition-all flex items-center justify-center gap-2 hover:bg-white/20"
+                    tabIndex={0}
+                    aria-label="Upload Images button"
+                    disabled={uploading}
+                  >
+                    <Upload size={16} />
+                    {uploading ? "Uploading..." : "Click to Upload Multiple Images"}
+                  </button>
+                  
+                  {(editingEvent ? eventImages.length > 0 : window.tempImages?.length > 0) && (
+                    <div className="mt-4">
+                      <p className="text-[10px] font-bold text-gray-400 mb-2">Image Gallery</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(editingEvent ? eventImages : (window.tempImages || []).map((url, idx) => ({ image_url: url, is_cover: idx === 0, image_id: `temp_${idx}` }))).map((img, idx) => (
+                          <div key={img.image_id || idx} className="relative group">
+                            <img 
+                              src={img.image_url} 
+                              alt={`Event ${idx + 1}`} 
+                              className="w-20 h-20 object-cover rounded-lg border-2 border-white/20"
+                            />
+                            {img.is_cover && (
+                              <div className="absolute -top-2 -right-2 bg-yellow-500 text-black rounded-full p-1">
+                                <Star size={10} />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                              {!img.is_cover && editingEvent && (
+                                <button
+                                  type="button"
+                                  onClick={() => setAsCover(img.image_id)}
+                                  className="bg-yellow-500 text-black p-1 rounded"
+                                  title="Set as cover"
+                                >
+                                  <Star size={12} />
+                                </button>
+                              )}
+                              {editingEvent && (
+                                <button
+                                  type="button"
+                                  onClick={() => deleteImage(img.image_id)}
+                                  className="bg-red-500 text-white p-1 rounded"
+                                  title="Delete image"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[8px] text-gray-500 mt-2">* The FIRST image uploaded automatically becomes the COVER PHOTO</p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-400 mb-2 block">Availability Status</label>
+                  <select
+                    name="event_status"
+                    value={formData.event_status}
+                    onChange={handleInputChange}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-yellow-500 transition-all"
+                    tabIndex={0}
+                    aria-label="Availability status selection"
+                  >
+                    <option value="Available" className="bg-[#1a1a2e]">Available</option>
+                    <option value="Unavailable" className="bg-[#1a1a2e]">Unavailable</option>
+                  </select>
+                </div>
+
+                <button 
+                  type="submit"
+                  disabled={uploading}
+                  className="submit-btn w-full bg-yellow-500 text-black py-4 rounded-xl font-black uppercase tracking-widest text-[11px] hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20 mt-4 disabled:opacity-50"
+                  tabIndex={0}
+                  aria-label="Save Package button"
+                >
+                  {uploading ? "Uploading Images..." : (editingEvent ? "Update Package" : "Save Package")}
+                </button>
+              </form>
+            </div>
           </div>
         )}
       </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white max-w-2xl w-full rounded-[2rem] p-8 border border-slate-100 shadow-2xl relative my-8">
-            <button 
-              onClick={() => {
-                setIsModalOpen(false);
-                setEditingEvent(null);
-                setEventImages([]);
-                window.tempImages = [];
-                setFormData({
-                  event_name: '',
-                  venue: '',
-                  amount_per_pax: '',
-                  event_status: 'Available',
-                  event_description: '',
-                });
-              }}
-              className="close-modal-btn absolute right-6 top-6 text-slate-400 hover:text-black transition-colors"
-              tabIndex={0}
-              aria-label="Close modal button"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="mb-6">
-              <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">
-                {editingEvent ? 'Edit Package' : 'Create New Package'}
-              </h2>
-              <div className="h-1 w-12 bg-[#B8860B] mt-2"></div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 block">Package Name</label>
-                <input 
-                  type="text"
-                  name="event_name"
-                  required
-                  value={formData.event_name}
-                  onChange={handleInputChange}
-                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold outline-none focus:border-[#B8860B] transition-all"
-                  placeholder="e.g., Baptismal Package"
-                  tabIndex={0}
-                  aria-label="Package name input"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 block">Venue Location</label>
-                <input 
-                  type="text"
-                  name="venue"
-                  required
-                  value={formData.venue}
-                  onChange={handleInputChange}
-                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold outline-none focus:border-[#B8860B] transition-all"
-                  placeholder="e.g., Manila Hotel Garden"
-                  tabIndex={0}
-                  aria-label="Venue location input"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 block">Price Per Pax (₱)</label>
-                <input 
-                  type="number"
-                  name="amount_per_pax"
-                  required
-                  value={formData.amount_per_pax}
-                  onChange={handleInputChange}
-                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold outline-none focus:border-[#B8860B] transition-all"
-                  placeholder="0.00"
-                  tabIndex={0}
-                  aria-label="Price per pax input"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 block">Description</label>
-                <textarea 
-                  name="event_description"
-                  rows="3"
-                  value={formData.event_description}
-                  onChange={handleInputChange}
-                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold outline-none focus:border-[#B8860B] transition-all resize-none"
-                  placeholder="Describe the event package..."
-                  tabIndex={0}
-                  aria-label="Event description text area"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 block">Event Images (Multiple)</label>
-                <input 
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  tabIndex={0}
-                  aria-label="Upload multiple images"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="upload-btn w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold outline-none focus:border-[#B8860B] transition-all flex items-center justify-center gap-2"
-                  tabIndex={0}
-                  aria-label="Upload Images button"
-                  disabled={uploading}
-                >
-                  <Upload size={16} />
-                  {uploading ? "Uploading..." : "Click to Upload Multiple Images"}
-                </button>
-                
-                {/* Image Gallery */}
-                {(editingEvent ? eventImages.length > 0 : window.tempImages?.length > 0) && (
-                  <div className="mt-4">
-                    <p className="text-[10px] font-bold text-slate-500 mb-2">Image Gallery</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(editingEvent ? eventImages : (window.tempImages || []).map((url, idx) => ({ image_url: url, is_cover: idx === 0, image_id: `temp_${idx}` }))).map((img, idx) => (
-                        <div key={img.image_id || idx} className="relative group">
-                          <img 
-                            src={img.image_url} 
-                            alt={`Event ${idx + 1}`} 
-                            className="w-20 h-20 object-cover rounded-lg border-2 border-slate-200"
-                          />
-                          {img.is_cover && (
-                            <div className="absolute -top-2 -right-2 bg-[#B8860B] text-white rounded-full p-1">
-                              <Star size={10} />
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                            {!img.is_cover && editingEvent && (
-                              <button
-                                type="button"
-                                onClick={() => setAsCover(img.image_id)}
-                                className="bg-[#B8860B] text-white p-1 rounded"
-                                title="Set as cover"
-                              >
-                                <Star size={12} />
-                              </button>
-                            )}
-                            {editingEvent && (
-                              <button
-                                type="button"
-                                onClick={() => deleteImage(img.image_id)}
-                                className="bg-red-500 text-white p-1 rounded"
-                                title="Delete image"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-[8px] text-slate-400 mt-2">* The FIRST image uploaded automatically becomes the COVER PHOTO</p>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 block">Availability Status</label>
-                <select
-                  name="event_status"
-                  value={formData.event_status}
-                  onChange={handleInputChange}
-                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold outline-none focus:border-[#B8860B] transition-all"
-                  tabIndex={0}
-                  aria-label="Availability status selection"
-                >
-                  <option value="Available">Available</option>
-                  <option value="Unavailable">Unavailable</option>
-                </select>
-              </div>
-
-              <button 
-                type="submit"
-                disabled={uploading}
-                className="submit-btn w-full bg-black text-white py-4 rounded-xl font-black uppercase tracking-widest text-[11px] hover:bg-[#B8860B] transition-all shadow-lg mt-4 disabled:opacity-50"
-                tabIndex={0}
-                aria-label="Save Package button"
-              >
-                {uploading ? "Uploading Images..." : (editingEvent ? "Update Package" : "Save Package")}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

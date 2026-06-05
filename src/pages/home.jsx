@@ -31,6 +31,7 @@ function Home({ isRecovering }) {
   const [showAuth, setShowAuth] = useState(getHasToken());
   const [activeTab, setActiveTab] = useState(getHasToken() ? 'forgot' : 'login');
   const [session, setSession] = useState(null);
+  const [authError, setAuthError] = useState(null);
 
   const speakText = (text) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -104,11 +105,13 @@ function Home({ isRecovering }) {
     else if (lowerCommand === "login" || lowerCommand === "log in" || lowerCommand === "sign in" || lowerCommand.includes("login")) {
       setShowAuth(true);
       setActiveTab('login');
+      setAuthError(null);
       speakText("Login form opened");
     }
     else if (lowerCommand === "signup" || lowerCommand === "sign up" || lowerCommand === "create account" || lowerCommand.includes("signup")) {
       setShowAuth(true);
       setActiveTab('signup');
+      setAuthError(null);
       speakText("Sign up form opened");
     }
     else if (lowerCommand === "packages" || lowerCommand === "package" || lowerCommand === "view packages" || 
@@ -160,6 +163,7 @@ function Home({ isRecovering }) {
       if (showAuth) {
         setShowAuth(false);
         setActiveTab('login');
+        setAuthError(null);
         speakText("Closed");
       } else {
         speakText("Nothing to close");
@@ -352,34 +356,61 @@ function Home({ isRecovering }) {
     speakText("Logged out");
   };
 
+  // Simple error boundary for forms
+  const renderForm = () => {
+    try {
+      if (activeTab === 'login') {
+        return <LoginForm onForgotClick={() => setActiveTab('forgot')} />;
+      }
+      if (activeTab === 'signup') {
+        return <SignupForm />;
+      }
+      return null;
+    } catch (err) {
+      console.error("Form render error:", err);
+      return (
+        <div className="text-center text-red-400 text-xs py-4">
+          Error loading form. Please refresh the page.
+        </div>
+      );
+    }
+  };
+
   return (
-    <div className="min-h-screen text-white font-sans bg-black selection:bg-yellow-500/30 scroll-smooth">
+    <div className="min-h-screen text-white font-sans bg-gradient-to-br from-[#1a1a2e] to-[#16213e] selection:bg-yellow-500/30 scroll-smooth relative overflow-x-hidden">
+      {/* Elegant Background Ornaments */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-40 w-80 h-80 bg-yellow-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 -right-40 w-96 h-96 bg-yellow-600/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-gradient-to-r from-yellow-500/5 to-transparent rounded-full blur-3xl"></div>
+      </div>
+
       {focusedElement && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm">
-          <Volume2 size={14} className="inline mr-2" />
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-xl text-white px-4 py-2 rounded-full z-50 text-sm border border-yellow-500/30">
+          <Volume2 size={14} className="inline mr-2 text-yellow-500" />
           {focusedElement}
         </div>
       )}
 
       {isListening && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[#D4AF37] text-black px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg">
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg shadow-yellow-500/20">
           <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
           <Mic size={14} />
           <span className="text-xs font-bold">Say a command...</span>
         </div>
       )}
 
-      <div className="fixed top-20 right-4 bg-black/90 text-white p-3 rounded-xl z-40 text-xs max-w-xs border border-white/10">
-        <Keyboard size={14} className="inline mr-1" />
+      <div className="fixed top-20 right-4 bg-black/60 backdrop-blur-xl text-white p-3 rounded-xl z-40 text-xs max-w-xs border border-yellow-500/20">
+        <Keyboard size={14} className="inline mr-1 text-yellow-500" />
         <span className="font-bold">Accessibility:</span>
         <p className="mt-1">Press TAB to navigate, ENTER to select</p>
         <p>Press MIC button or say "mic" for voice commands</p>
         <p>Say "help" for all voice commands</p>
       </div>
 
-      <nav className="flex items-center justify-between px-12 py-6 fixed top-0 w-full z-[100] bg-black/40 backdrop-blur-md border-b border-white/5">
+      <nav className="flex items-center justify-between px-12 py-6 fixed top-0 w-full z-[100] bg-black/40 backdrop-blur-xl border-b border-yellow-500/20">
         <div 
-          className="text-2xl font-black text-yellow-500 italic tracking-tighter cursor-pointer"
+          className="text-2xl font-black italic tracking-tighter cursor-pointer bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent"
           onClick={() => handleNavAction('home')}
           tabIndex={0}
           aria-label="Faustino's home"
@@ -397,7 +428,7 @@ function Home({ isRecovering }) {
         <div className="flex gap-3 items-center">
           <button 
             onClick={startVoiceCommand} 
-            className="mic-button p-2 bg-white/10 rounded-full hover:bg-yellow-500 transition-all"
+            className="mic-button p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-yellow-500 hover:text-black transition-all border border-white/20"
             tabIndex={0}
             aria-label="Microphone button. Press Enter to activate voice commands."
           >
@@ -406,16 +437,16 @@ function Home({ isRecovering }) {
           {!session ? (
             <>
               <button 
-                onClick={() => { setShowAuth(true); setActiveTab('signup'); }} 
-                className="signup-btn text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer"
+                onClick={() => { setShowAuth(true); setActiveTab('signup'); setAuthError(null); }} 
+                className="signup-btn text-[10px] font-black uppercase tracking-widest bg-yellow-500 text-black px-7 py-3 rounded-full active:scale-95 transition-all cursor-pointer hover:bg-yellow-400 shadow-lg shadow-yellow-500/20"
                 tabIndex={0}
                 aria-label="Sign Up button. Press Enter to create an account."
               >
                 Sign Up
               </button>
               <button 
-                onClick={() => { setShowAuth(true); setActiveTab('login'); }} 
-                className="login-btn text-[10px] font-black uppercase tracking-widest bg-[#D4AF37] text-white px-7 py-3 rounded-md active:scale-95 transition-all cursor-pointer"
+                onClick={() => { setShowAuth(true); setActiveTab('login'); setAuthError(null); }} 
+                className="login-btn text-[10px] font-black uppercase tracking-widest bg-yellow-500 text-black px-7 py-3 rounded-full active:scale-95 transition-all cursor-pointer hover:bg-yellow-400 shadow-lg shadow-yellow-500/20"
                 tabIndex={0}
                 aria-label="Log In button. Press Enter to sign in."
               >
@@ -426,7 +457,7 @@ function Home({ isRecovering }) {
             <div className="flex gap-3">
               <button 
                 onClick={() => navigate(session.user.email.includes('admin') ? '/AdminDashboard' : '/ClientDashboard')} 
-                className="dashboard-btn text-[10px] font-black uppercase tracking-widest bg-white text-black px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer"
+                className="dashboard-btn text-[10px] font-black uppercase tracking-widest bg-yellow-500 text-black px-6 py-3 rounded-full active:scale-95 transition-all cursor-pointer hover:bg-yellow-400"
                 tabIndex={0}
                 aria-label="Dashboard button. Press Enter to go to your dashboard."
               >
@@ -434,7 +465,7 @@ function Home({ isRecovering }) {
               </button>
               <button 
                 onClick={handleLogout} 
-                className="logout-btn text-[10px] font-black uppercase tracking-widest border border-white/20 text-white px-6 py-3 rounded-md active:scale-95 transition-all cursor-pointer"
+                className="logout-btn text-[10px] font-black uppercase tracking-widest border border-white/30 text-white px-6 py-3 rounded-full active:scale-95 transition-all cursor-pointer hover:bg-red-500/20 hover:border-red-500/50"
                 tabIndex={0}
                 aria-label="Logout button. Press Enter to sign out."
               >
@@ -447,30 +478,34 @@ function Home({ isRecovering }) {
 
       <section id="home" className="relative h-screen flex flex-col items-center justify-center text-center px-6" tabIndex={0} aria-label="Hero section">
         <div className="absolute inset-0 z-0">
-          <img src={EVL} alt="Hero" className="w-full h-full object-cover opacity-30" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/60 to-black" />
+          <img src={EVL} alt="Hero" className="w-full h-full object-cover opacity-20" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/60 to-[#1a1a2e]" />
         </div>
         <div className="relative z-10 space-y-6">
-          <h1 className="text-6xl md:text-8xl font-serif italic text-yellow-500 tracking-tight drop-shadow-2xl">Faustino's Event Place</h1>
+          <h1 className="text-6xl md:text-8xl font-serif italic tracking-tight drop-shadow-2xl bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">
+            Faustino's Event Place
+          </h1>
         </div>
       </section>
 
-      <section id="about" className="py-32 px-12 bg-black min-h-[70vh] flex items-center" tabIndex={0} aria-label="About Us section">
+      <section id="about" className="py-32 px-12 min-h-[70vh] flex items-center relative z-10" tabIndex={0} aria-label="About Us section">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-          <div className="w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl border border-white/5 aspect-video">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl border border-yellow-500/20 aspect-video">
             <img src={LVE} alt="About Us" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-4xl md:text-5xl font-serif italic text-white leading-tight">Where Every Detail Tells a Story.</h2>
         </div>
       </section>
 
-      <section id="celebrations" className="py-24 px-12 bg-black border-t border-white/5" tabIndex={0} aria-label="Events section">
-        <div className="text-center mb-16"><h2 className="text-4xl md:text-5xl font-serif italic text-yellow-500">Our Packages</h2></div>
+      <section id="celebrations" className="py-24 px-12 border-t border-yellow-500/20 relative z-10" tabIndex={0} aria-label="Events section">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-serif italic bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">Our Packages</h2>
+        </div>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 pb-32">
           {[EVL, LVE, Debut].map((img, index) => (
             <div 
               key={index} 
-              className="package-card group overflow-hidden rounded-xl aspect-[4/5] cursor-pointer" 
+              className="package-card group overflow-hidden rounded-xl aspect-[4/5] cursor-pointer border border-white/10 hover:border-yellow-500/50 transition-all duration-300" 
               onClick={() => navigate('/ClientDashboard')}
               tabIndex={0}
               aria-label="Package image. Press Enter to view packages"
@@ -486,45 +521,67 @@ function Home({ isRecovering }) {
         </div>
       </section>
 
-      <section id="find-us" className="py-24 px-12 bg-black border-t border-white/5" tabIndex={0} aria-label="Location section">
+      <section id="find-us" className="py-24 px-12 border-t border-yellow-500/20 relative z-10" tabIndex={0} aria-label="Location section">
         <div className="max-w-7xl mx-auto space-y-12">
-          <div className="text-center"><h2 className="text-4xl md:text-5xl font-serif italic text-yellow-500">Find Us</h2></div>
-          <div className="w-full h-[450px] rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 relative">
+          <div className="text-center">
+            <h2 className="text-4xl md:text-5xl font-serif italic bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">Find Us</h2>
+          </div>
+          <div className="w-full h-[450px] rounded-2xl overflow-hidden shadow-2xl border border-yellow-500/20 relative">
             <iframe title="Location" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3864.5516!2d120.9333!3d14.4103!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397d28ccbc9dd0d%3A0x12012061404c6c05!2s54%20Tahimik%20St%2C%20Imus%2C%20Cavite!5e0!3m2!1sen!2sph!4v1715560000000!5m2!1sen!2sph" width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy"></iframe>
           </div>
         </div>
       </section>
 
       {showAuth && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
           <div className="relative z-10 w-full max-w-md">
             {activeTab === 'forgot' ? (
               <ForgotPassword isOpen={true} onClose={() => { setShowAuth(false); setActiveTab('login'); }} />
             ) : (
-              <div className="bg-[#111] p-10 rounded-2xl border border-white/10 shadow-2xl">
-                <div className="flex justify-center gap-8 mb-8 border-b border-white/5 pb-4">
+              <div className="bg-[#1a1a2e]/90 backdrop-blur-xl p-10 rounded-2xl border border-yellow-500/30 shadow-2xl">
+                {/* Debug indicator - remove later */}
+                <div className="text-center text-[8px] text-yellow-500/50 mb-2">
+                  Active: {activeTab}
+                </div>
+                
+                <div className="flex justify-center gap-8 mb-8 border-b border-yellow-500/20 pb-4">
                   <button 
-                    onClick={() => setActiveTab('login')} 
-                    className={`text-[10px] font-black uppercase ${activeTab === 'login' ? 'text-yellow-500' : 'text-gray-400'}`}
+                    onClick={() => {
+                      console.log("Switching to login");
+                      setActiveTab('login');
+                      setAuthError(null);
+                    }} 
+                    className={`text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'login' ? 'text-yellow-500 border-b-2 border-yellow-500 pb-3 -mb-4' : 'text-gray-500 hover:text-yellow-500'}`}
                     tabIndex={0}
                     aria-label="Login tab"
                   >
                     Log In
                   </button>
                   <button 
-                    onClick={() => setActiveTab('signup')} 
-                    className={`text-[10px] font-black uppercase ${activeTab === 'signup' ? 'text-yellow-500' : 'text-gray-400'}`}
+                    onClick={() => {
+                      console.log("Switching to signup");
+                      setActiveTab('signup');
+                      setAuthError(null);
+                    }} 
+                    className={`text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'signup' ? 'text-yellow-500 border-b-2 border-yellow-500 pb-3 -mb-4' : 'text-gray-500 hover:text-yellow-500'}`}
                     tabIndex={0}
                     aria-label="Sign Up tab"
                   >
                     Sign Up
                   </button>
                 </div>
-                {activeTab === 'login' && <LoginForm onForgotClick={() => setActiveTab('forgot')} />}
-                {activeTab === 'signup' && <SignupForm />}
+                
+                {authError && (
+                  <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400 text-xs text-center">
+                    {authError}
+                  </div>
+                )}
+                
+                {renderForm()}
+                
                 <button 
-                  onClick={() => { setShowAuth(false); setActiveTab('login'); }} 
-                  className="mt-8 w-full text-[9px] font-bold uppercase text-gray-600 hover:text-white transition-all text-center tracking-widest cursor-pointer"
+                  onClick={() => { setShowAuth(false); setActiveTab('login'); setAuthError(null); }} 
+                  className="mt-8 w-full text-[9px] font-bold uppercase text-gray-500 hover:text-yellow-500 transition-all text-center tracking-widest cursor-pointer"
                   tabIndex={0}
                   aria-label="Back to home"
                 >

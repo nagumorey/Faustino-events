@@ -90,9 +90,6 @@ const BookNow = () => {
   const fetchData = useCallback(async () => {
     if (!event_id) return;
     
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData?.session?.user?.id;
-    
     const { data, error } = await supabase
       .from("bookings")
       .select("event_date, booking_status, appointment_date, appointment_time")
@@ -103,7 +100,6 @@ const BookNow = () => {
       const dates = data.map(item => item.event_date).filter(d => d);
       setBookedEventDates(dates);
       
-      // Exact dates only - NO 7-day blocking
       const allBlockedDates = [...dates];
       setBlockedDates(allBlockedDates);
 
@@ -395,9 +391,8 @@ const BookNow = () => {
         email = session.user.email;
       }
 
-      // ✅ TOTAL AMOUNT = amount_per_pax × total_pax
       const computedTotalAmount = finalEventPrice * totalPax;
-      const downPaymentAmount = computedTotalAmount * 0.2; // 20% fixed
+      const downPaymentAmount = computedTotalAmount * 0.2;
 
       const insertData = {
         user_id: session.user.id,
@@ -471,9 +466,8 @@ const BookNow = () => {
       return;
     }
 
-    // Kunin ang total amount mula sa bookingData
     const totalAmount = bookingData?.total_amount || (numericPrice * (parseInt(formData.total_pax) || 1));
-    const downPaymentAmount = totalAmount * 0.2; // ✅ Fixed 20%
+    const downPaymentAmount = totalAmount * 0.2;
     
     let amountToPay;
     if (paymentType === "downpayment") {
@@ -521,7 +515,6 @@ const BookNow = () => {
     setProcessing(false);
   };
 
-  // Compute para sa display sa payment modal
   const getTotalAmount = () => {
     if (bookingData?.total_amount) return bookingData.total_amount;
     const totalPax = parseInt(formData.total_pax) || 1;
@@ -533,115 +526,99 @@ const BookNow = () => {
   const remainingBalanceDisplay = totalAmountDisplay - downPaymentDisplay;
 
   return (
-    <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-6 relative">
+    <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#16213e] flex items-center justify-center p-6 relative">
+      {/* Elegant Background Ornaments */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-40 w-80 h-80 bg-yellow-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 -right-40 w-96 h-96 bg-yellow-600/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-gradient-to-r from-yellow-500/5 to-transparent rounded-full blur-3xl"></div>
+      </div>
+
       <style>{`
+        .react-datepicker {
+          background-color: #1a1a2e !important;
+          border-color: #333 !important;
+          font-family: inherit !important;
+        }
+        .react-datepicker__header {
+          background-color: #16213e !important;
+          border-bottom-color: #333 !important;
+        }
+        .react-datepicker__current-month,
+        .react-datepicker__day-name,
+        .react-datepicker__day {
+          color: #fff !important;
+        }
+        .react-datepicker__day:hover {
+          background-color: #eab308 !important;
+          color: #000 !important;
+        }
+        .react-datepicker__day--selected {
+          background-color: #eab308 !important;
+          color: #000 !important;
+        }
         .react-datepicker__day--locked {
-          background-color: #fee2e2 !important;
-          color: #dc2626 !important;
+          background-color: #450a0a !important;
+          color: #ef4444 !important;
           text-decoration: line-through !important;
           cursor: not-allowed !important;
           opacity: 0.6 !important;
         }
         .react-datepicker__day--booked-event {
-          background-color: #d4a373 !important;
-          color: white !important;
+          background-color: #78350f !important;
+          color: #fcd34d !important;
           text-decoration: line-through !important;
           cursor: not-allowed !important;
           opacity: 0.7 !important;
-          position: relative;
-        }
-        .react-datepicker__day--booked-event:hover::after {
-          content: "⚠️ This date has an existing event!";
-          position: absolute;
-          bottom: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #8B4513;
-          color: white;
-          font-size: 10px;
-          padding: 4px 8px;
-          border-radius: 6px;
-          white-space: nowrap;
-          z-index: 10;
-          font-weight: normal;
         }
         .react-datepicker__day--available {
-          background-color: white !important;
-          color: #1e293b !important;
+          background-color: transparent !important;
+          color: #fff !important;
         }
         .react-datepicker__day--available:hover {
-          background-color: #B8860B !important;
-          color: white !important;
+          background-color: #eab308 !important;
+          color: #000 !important;
         }
         .react-datepicker__day--event-date-appointment {
-          background-color: #d4a373 !important;
-          color: white !important;
+          background-color: #78350f !important;
+          color: #fcd34d !important;
           text-decoration: line-through !important;
           cursor: not-allowed !important;
           opacity: 0.7 !important;
-          position: relative;
-        }
-        .react-datepicker__day--event-date-appointment:hover::after {
-          content: "⚠️ Cannot appoint on this date! There is an existing event.";
-          position: absolute;
-          bottom: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #8B4513;
-          color: white;
-          font-size: 10px;
-          padding: 4px 8px;
-          border-radius: 6px;
-          white-space: nowrap;
-          z-index: 10;
-          font-weight: normal;
         }
         .react-datepicker__day--appointment-full {
-          background-color: #d4a373 !important;
-          color: white !important;
+          background-color: #78350f !important;
+          color: #fcd34d !important;
           text-decoration: line-through !important;
           cursor: not-allowed !important;
           opacity: 0.7 !important;
-          position: relative;
-        }
-        .react-datepicker__day--appointment-full:hover::after {
-          content: "⚠️ FULL SLOT! No available appointment time.";
-          position: absolute;
-          bottom: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #8B4513;
-          color: white;
-          font-size: 10px;
-          padding: 4px 8px;
-          border-radius: 6px;
-          white-space: nowrap;
-          z-index: 10;
-          font-weight: normal;
         }
         .react-datepicker__day--out-of-range {
-          background-color: #fee2e2 !important;
-          color: #dc2626 !important;
+          background-color: #450a0a !important;
+          color: #ef4444 !important;
           text-decoration: line-through !important;
           cursor: not-allowed !important;
           opacity: 0.6 !important;
         }
+        .react-datepicker__day--disabled {
+          color: #666 !important;
+        }
       `}</style>
 
       {alertMessage && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white max-w-md w-full rounded-[2rem] p-8 border border-red-100 shadow-2xl text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-6">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1a2e]/90 backdrop-blur-xl max-w-md w-full rounded-2xl p-8 border border-yellow-500/30 shadow-2xl text-center flex flex-col items-center">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 mb-6">
               <AlertTriangle size={32} />
             </div>
-            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-2">Reservation Conflict</h3>
-            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8">{alertMessage}</p>
+            <h3 className="text-xl font-black uppercase tracking-tight text-white mb-2">Reservation Conflict</h3>
+            <p className="text-gray-400 text-sm font-medium leading-relaxed mb-8">{alertMessage}</p>
             <button 
               onClick={() => {
                 setAlertMessage(null);
                 resetForm();
               }}
-              className="w-full bg-black text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 transition-colors shadow-lg"
+              className="w-full bg-yellow-500 text-black py-4 rounded-full font-black uppercase tracking-widest text-[10px] hover:bg-yellow-400 transition-colors shadow-lg"
             >
               Okay, I'll Change It
             </button>
@@ -650,11 +627,11 @@ const BookNow = () => {
       )}
 
       {paymentSuccess && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white max-w-md w-full rounded-[2rem] p-8 text-center">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1a2e]/90 backdrop-blur-xl max-w-md w-full rounded-2xl p-8 border border-yellow-500/30 shadow-2xl text-center">
             <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
-            <h3 className="text-2xl font-black uppercase mb-2">Booking Successful!</h3>
-            <p className="text-gray-500 mb-6">
+            <h3 className="text-2xl font-black uppercase mb-2 text-white">Booking Successful!</h3>
+            <p className="text-gray-400 mb-6">
               Your booking has been confirmed. 
               {paymentType === "downpayment" && ` Remaining balance of ₱${remainingBalanceDisplay.toLocaleString()} is payable before the event.`}
             </p>
@@ -663,7 +640,7 @@ const BookNow = () => {
                 resetForm();
                 navigate("/ClientDashboard");
               }}
-              className="w-full bg-[#B8860B] text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px]"
+              className="w-full bg-yellow-500 text-black py-4 rounded-full font-black uppercase tracking-widest text-[10px] hover:bg-yellow-400 transition-all"
             >
               Go to Dashboard
             </button>
@@ -672,32 +649,32 @@ const BookNow = () => {
       )}
 
       {showPaymentModal && bookingData && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto">
+          <div className="bg-[#1a1a2e]/90 backdrop-blur-xl rounded-2xl max-w-md w-full p-6 border border-yellow-500/30 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-black uppercase">Payment</h3>
-              <button onClick={handleClosePaymentModal} className="p-1 hover:bg-gray-100 rounded">
+              <h3 className="text-2xl font-black uppercase text-white">Payment</h3>
+              <button onClick={handleClosePaymentModal} className="p-1 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-xl mb-6">
-              <p className="text-[10px] font-black uppercase text-gray-400">Booking Summary</p>
-              <p className="font-bold">{bookingData.event_type || selectedType}</p>
-              <p className="text-sm text-gray-600">Event: {bookingData.event_date ? new Date(bookingData.event_date).toLocaleDateString() : formData.event_date?.toLocaleDateString()} | {bookingData.start_time || formData.start_time} - {bookingData.end_time || formData.end_time}</p>
-              <p className="text-sm text-gray-600">Appointment: {bookingData.appointment_date ? new Date(bookingData.appointment_date).toLocaleDateString() : formData.appointment_date?.toLocaleDateString()} at {bookingData.appointment_time || formData.appointment_time}</p>
-              <p className="text-sm text-gray-600">Guests: {bookingData.total_pax || formData.total_pax} Pax</p>
+            <div className="bg-white/5 p-4 rounded-xl mb-6 border border-white/10">
+              <p className="text-[10px] font-black uppercase text-gray-500">Booking Summary</p>
+              <p className="font-bold text-white">{bookingData.event_type || selectedType}</p>
+              <p className="text-sm text-gray-400">Event: {bookingData.event_date ? new Date(bookingData.event_date).toLocaleDateString() : formData.event_date?.toLocaleDateString()} | {bookingData.start_time || formData.start_time} - {bookingData.end_time || formData.end_time}</p>
+              <p className="text-sm text-gray-400">Appointment: {bookingData.appointment_date ? new Date(bookingData.appointment_date).toLocaleDateString() : formData.appointment_date?.toLocaleDateString()} at {bookingData.appointment_time || formData.appointment_time}</p>
+              <p className="text-sm text-gray-400">Guests: {bookingData.total_pax || formData.total_pax} Pax</p>
             </div>
 
             <div className="mb-6">
-              <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Payment Type</label>
+              <label className="block text-[10px] font-black uppercase text-gray-500 mb-2">Payment Type</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setPaymentType("downpayment")}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    paymentType === "downpayment" ? "border-[#B8860B] bg-[#B8860B]/10" : "border-gray-200"
+                    paymentType === "downpayment" ? "border-yellow-500 bg-yellow-500/10 text-yellow-500" : "border-white/20 text-white hover:border-yellow-500/50"
                   }`}
                 >
                   <Percent size={24} className="mx-auto mb-2" />
@@ -707,7 +684,7 @@ const BookNow = () => {
                 <button
                   onClick={() => setPaymentType("full")}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    paymentType === "full" ? "border-[#B8860B] bg-[#B8860B]/10" : "border-gray-200"
+                    paymentType === "full" ? "border-yellow-500 bg-yellow-500/10 text-yellow-500" : "border-white/20 text-white hover:border-yellow-500/50"
                   }`}
                 >
                   <CreditCard size={24} className="mx-auto mb-2" />
@@ -718,77 +695,53 @@ const BookNow = () => {
             </div>
 
             <div className="mb-6">
-              <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Payment Method</label>
+              <label className="block text-[10px] font-black uppercase text-gray-500 mb-2">Payment Method</label>
               <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setSelectedPaymentMethod("GCash")}
-                  className={`p-3 rounded-xl border-2 transition-all ${
-                    selectedPaymentMethod === "GCash" ? "border-[#B8860B] bg-[#B8860B]/10" : "border-gray-200"
-                  }`}
-                >
-                  <span className="text-xl mb-1 block">📱</span>
-                  <p className="text-xs font-bold">GCash</p>
-                </button>
-                <button
-                  onClick={() => setSelectedPaymentMethod("PayMaya")}
-                  className={`p-3 rounded-xl border-2 transition-all ${
-                    selectedPaymentMethod === "PayMaya" ? "border-[#B8860B] bg-[#B8860B]/10" : "border-gray-200"
-                  }`}
-                >
-                  <span className="text-xl mb-1 block">💳</span>
-                  <p className="text-xs font-bold">PayMaya</p>
-                </button>
-                <button
-                  onClick={() => setSelectedPaymentMethod("Bank Transfer")}
-                  className={`p-3 rounded-xl border-2 transition-all ${
-                    selectedPaymentMethod === "Bank Transfer" ? "border-[#B8860B] bg-[#B8860B]/10" : "border-gray-200"
-                  }`}
-                >
-                  <span className="text-xl mb-1 block">🏦</span>
-                  <p className="text-xs font-bold">Bank Transfer</p>
-                </button>
-                <button
-                  onClick={() => setSelectedPaymentMethod("Credit Card")}
-                  className={`p-3 rounded-xl border-2 transition-all ${
-                    selectedPaymentMethod === "Credit Card" ? "border-[#B8860B] bg-[#B8860B]/10" : "border-gray-200"
-                  }`}
-                >
-                  <CreditCard size={24} className="mx-auto mb-1" />
-                  <p className="text-xs font-bold">Credit Card</p>
-                </button>
+                {["GCash", "PayMaya", "Bank Transfer", "Credit Card"].map((method) => (
+                  <button
+                    key={method}
+                    onClick={() => setSelectedPaymentMethod(method)}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      selectedPaymentMethod === method ? "border-yellow-500 bg-yellow-500/10 text-yellow-500" : "border-white/20 text-white hover:border-yellow-500/50"
+                    }`}
+                  >
+                    <span className="text-xl mb-1 block">{method === "GCash" ? "📱" : method === "PayMaya" ? "💳" : method === "Bank Transfer" ? "🏦" : "💳"}</span>
+                    <p className="text-xs font-bold">{method}</p>
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-xl mb-6">
+            <div className="bg-white/5 p-4 rounded-xl mb-6 border border-white/10">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Package Price (per pax):</span>
-                <span className="font-bold">₱{numericPrice.toLocaleString()}.00</span>
+                <span className="text-gray-400">Package Price (per pax):</span>
+                <span className="font-bold text-white">₱{numericPrice.toLocaleString()}.00</span>
               </div>
               <div className="flex justify-between items-center mt-1">
-                <span className="text-gray-600">Total Guests:</span>
-                <span className="font-bold">{bookingData.total_pax || formData.total_pax || 0} Pax</span>
+                <span className="text-gray-400">Total Guests:</span>
+                <span className="font-bold text-white">{bookingData.total_pax || formData.total_pax || 0} Pax</span>
               </div>
-              <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
-                <span className="text-gray-600 font-bold">Total Amount:</span>
-                <span className="font-bold text-xl text-[#B8860B]">₱{totalAmountDisplay.toLocaleString()}.00</span>
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/10">
+                <span className="text-gray-400 font-bold">Total Amount:</span>
+                <span className="font-bold text-xl text-yellow-500">₱{totalAmountDisplay.toLocaleString()}.00</span>
               </div>
               {paymentType === "downpayment" && (
                 <>
                   <div className="flex justify-between items-center mt-2">
-                    <span className="text-gray-600">Down Payment (20%):</span>
-                    <span className="font-bold text-[#B8860B]">₱{downPaymentDisplay.toLocaleString()}.00</span>
+                    <span className="text-gray-400">Down Payment (20%):</span>
+                    <span className="font-bold text-yellow-500">₱{downPaymentDisplay.toLocaleString()}.00</span>
                   </div>
                   <div className="flex justify-between items-center mt-1">
-                    <span className="text-gray-600">Remaining Balance:</span>
-                    <span className="font-bold">₱{remainingBalanceDisplay.toLocaleString()}.00</span>
+                    <span className="text-gray-400">Remaining Balance:</span>
+                    <span className="font-bold text-white">₱{remainingBalanceDisplay.toLocaleString()}.00</span>
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-2">* Down payment is fixed at 20% of total amount. Balance to be paid before the event.</p>
+                  <p className="text-[10px] text-gray-500 mt-2">* Down payment is fixed at 20% of total amount. Balance to be paid before the event.</p>
                 </>
               )}
               {paymentType === "full" && (
                 <div className="flex justify-between items-center mt-2 pt-2">
-                  <span className="text-gray-600 font-bold">Total to Pay:</span>
-                  <span className="font-bold text-xl text-[#B8860B]">₱{totalAmountDisplay.toLocaleString()}.00</span>
+                  <span className="text-gray-400 font-bold">Total to Pay:</span>
+                  <span className="font-bold text-xl text-yellow-500">₱{totalAmountDisplay.toLocaleString()}.00</span>
                 </div>
               )}
             </div>
@@ -796,11 +749,11 @@ const BookNow = () => {
             <button
               onClick={handlePayment}
               disabled={processing || !selectedPaymentMethod}
-              className="w-full bg-[#B8860B] text-white py-4 rounded-xl font-black uppercase tracking-wider disabled:opacity-50 transition-all"
+              className="w-full bg-yellow-500 text-black py-4 rounded-full font-black uppercase tracking-wider disabled:opacity-50 transition-all hover:bg-yellow-400"
             >
               {processing ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-black border-t-transparent"></div>
                   Processing...
                 </div>
               ) : (
@@ -811,31 +764,31 @@ const BookNow = () => {
         </div>
       )}
 
-      <div className="max-w-lg w-full bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[2.5rem] overflow-hidden border border-slate-50">
+      <div className="max-w-lg w-full bg-[#1a1a2e]/80 backdrop-blur-xl shadow-2xl rounded-2xl overflow-hidden border border-yellow-500/30">
         <div className="p-8 md:p-12">
           <button 
             onClick={() => {
               resetForm();
               navigate(-1);
             }}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-black transition-colors mb-10"
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-yellow-500 transition-colors mb-10"
           >
             <ChevronLeft size={14} /> Back
           </button>
 
           <div className="mb-10">
-            <h2 className="text-3xl font-black uppercase tracking-tighter leading-none mb-2">Confirm Reservation</h2>
-            <div className="h-1 w-12 bg-[#B8860B]"></div>
+            <h2 className="text-3xl font-black uppercase tracking-tighter leading-none mb-2 text-white">Confirm Reservation</h2>
+            <div className="h-1 w-12 bg-yellow-500"></div>
           </div>
 
-          <div className="bg-slate-50/50 p-6 rounded-2xl mb-10 border border-slate-100 flex items-center gap-5">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#B8860B]">
+          <div className="bg-white/5 p-6 rounded-2xl mb-10 border border-white/10 flex items-center gap-5">
+            <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center shadow-sm text-yellow-500">
               <Package size={20} />
             </div>
             <div>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Selected Package</p>
-              <p className="font-black text-lg uppercase tracking-tight leading-none mb-1">{selectedType || "No Package"}</p>
-              <p className="text-[#B8860B] font-bold text-sm tracking-tight">₱{numericPrice.toLocaleString()}.00 / pax</p>
+              <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">Selected Package</p>
+              <p className="font-black text-lg uppercase tracking-tight leading-none mb-1 text-white">{selectedType || "No Package"}</p>
+              <p className="text-yellow-500 font-bold text-sm tracking-tight">₱{numericPrice.toLocaleString()}.00 / pax</p>
             </div>
           </div>
 
@@ -843,21 +796,16 @@ const BookNow = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 block">Event Date</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 block">Event Date</label>
                   <div className="relative">
                     <DatePicker
                       selected={formData.event_date}
-                      onChange={(date) => {
-                        setFormData({...formData, event_date: date});
-                      }}
+                      onChange={(date) => setFormData({...formData, event_date: date})}
                       placeholderText="Select event date"
-                      className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all"
+                      className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-full py-4 pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-yellow-500 transition-all"
                       dateFormat="MMMM d, yyyy"
                       required
-                      filterDate={(date) => {
-                        const isLocked = isEventDateLocked(date);
-                        return !isLocked;
-                      }}
+                      filterDate={(date) => !isEventDateLocked(date)}
                       dayClassName={(date) => {
                         const dateStr = formatDateToYMD(date);
                         if (dateStr && bookedEventDates.includes(dateStr)) return "react-datepicker__day--booked-event";
@@ -865,13 +813,13 @@ const BookNow = () => {
                         return "react-datepicker__day--available";
                       }}
                     />
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                   </div>
-                  <p className="text-[8px] text-slate-400 mt-1">Brown: Already booked | Light Red: Past dates or less than 7 days from today</p>
+                  <p className="text-[8px] text-gray-600 mt-1">Brown: Already booked | Light Red: Past dates or less than 7 days from today</p>
                 </div>
 
                 <div className="relative">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 block">Appointment Date</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 block">Appointment Date</label>
                   <div className="relative">
                     <DatePicker
                       selected={formData.appointment_date}
@@ -887,7 +835,7 @@ const BookNow = () => {
                         }
                       }}
                       placeholderText="Select appointment date"
-                      className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all"
+                      className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-full py-4 pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-yellow-500 transition-all"
                       dateFormat="MMMM d, yyyy"
                       required
                       filterDate={(date) => {
@@ -903,29 +851,23 @@ const BookNow = () => {
                         return "";
                       }}
                     />
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                   </div>
-                  <p className="text-[8px] text-slate-400 mt-1">Brown: Cannot appoint (event exists or full slots) | Light Red: Out of range (must be from TOMORROW to 3 DAYS BEFORE event)</p>
+                  <p className="text-[8px] text-gray-600 mt-1">Brown: Cannot appoint | Light Red: Out of range</p>
                   {formData.appointment_date && formData.event_date && formData.appointment_date >= formData.event_date && (
-                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 flex items-center gap-2">
+                    <div className="mt-2 p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-[10px] text-red-400 flex items-center gap-2">
                       <AlertTriangle size={12} />
-                      ERROR: Appointment date must be BEFORE event date! Please fix this.
+                      ERROR: Appointment date must be BEFORE event date!
                     </div>
                   )}
                   {formData.appointment_date && hasEventOnDate(formData.appointment_date) && (
-                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 flex items-center gap-2">
+                    <div className="mt-2 p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-[10px] text-red-400 flex items-center gap-2">
                       <AlertTriangle size={12} />
-                      ERROR: Cannot appoint on a date with an existing event! Please select another date.
-                    </div>
-                  )}
-                  {formData.appointment_date && formData.event_date && !isAppointmentDateInRange(formData.appointment_date, formData.event_date) && (
-                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 flex items-center gap-2">
-                      <AlertTriangle size={12} />
-                      ERROR: Appointment date must be from TOMORROW up to 3 DAYS BEFORE the event date!
+                      ERROR: Cannot appoint on a date with an existing event!
                     </div>
                   )}
                   {formData.appointment_date && fullAppointmentDates.includes(formatDateToYMD(formData.appointment_date)) && (
-                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-700 flex items-center gap-2">
+                    <div className="mt-2 p-2 bg-amber-500/20 border border-amber-500/30 rounded-lg text-[10px] text-amber-400 flex items-center gap-2">
                       <AlertTriangle size={12} />
                       ⚠️ This date has no available appointment slots (3/3 slots already booked).
                     </div>
@@ -935,16 +877,16 @@ const BookNow = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 block">Appointment Time</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 block">Appointment Time</label>
                   <div className="relative">
-                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                     <select
                       required
                       value={formData.appointment_time}
                       onChange={(e) => setFormData({...formData, appointment_time: e.target.value})}
-                      className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all appearance-none"
+                      className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-full py-4 pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-yellow-500 transition-all appearance-none"
                     >
-                      <option value="">Select appointment time</option>
+                      <option value="" className="bg-[#1a1a2e]">Select appointment time</option>
                       {appointmentTimeOptions.map(option => {
                         const isFull = isAppointmentSlotFull(formData.appointment_date, option.value);
                         const isPassed = isAppointmentTimePassed(formData.appointment_date, option.value);
@@ -953,24 +895,20 @@ const BookNow = () => {
                         if (isFull) label += " (FULL)";
                         if (isPassed) label += " (TIME PASSED)";
                         return (
-                          <option 
-                            key={option.value} 
-                            value={option.value}
-                            disabled={isDisabled}
-                          >
+                          <option key={option.value} value={option.value} disabled={isDisabled} className="bg-[#1a1a2e]">
                             {label}
                           </option>
                         );
                       })}
                     </select>
                   </div>
-                  <p className="text-[8px] text-slate-400 mt-1">3 slots per day only: 9:00 AM - 11:00 AM, 11:00 AM - 1:00 PM, 1:00 PM - 3:00 PM</p>
+                  <p className="text-[8px] text-gray-600 mt-1">3 slots per day only</p>
                 </div>
 
                 <div className="relative">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 block">Total Guests</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 block">Total Guests</label>
                   <div className="relative">
-                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                     <input 
                       type="number" 
                       min="50"
@@ -979,18 +917,18 @@ const BookNow = () => {
                       placeholder="50"
                       value={formData.total_pax}
                       onChange={(e) => setFormData({...formData, total_pax: e.target.value})}
-                      className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all"
+                      className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-full py-4 pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-yellow-500 transition-all"
                     />
                   </div>
-                  <p className="text-[8px] text-slate-400 mt-1">Minimum 50 Pax | Maximum 100 Pax</p>
+                  <p className="text-[8px] text-gray-600 mt-1">Minimum 50 Pax | Maximum 100 Pax</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 block">Event Start Time</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 block">Event Start Time</label>
                   <div className="relative">
-                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                     <select
                       required
                       value={formData.start_time}
@@ -1004,31 +942,29 @@ const BookNow = () => {
                         }
                         setFormData({...formData, start_time: newStartTime, end_time: defaultEndTime});
                       }}
-                      className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all appearance-none"
+                      className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-full py-4 pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-yellow-500 transition-all appearance-none"
                     >
-                      <option value="">Select start time</option>
+                      <option value="" className="bg-[#1a1a2e]">Select start time</option>
                       {startTimeOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
+                        <option key={option.value} value={option.value} className="bg-[#1a1a2e]">{option.label}</option>
                       ))}
                     </select>
                   </div>
-                  <p className="text-[8px] text-slate-400 mt-1">Last start time is 3:00 PM</p>
+                  <p className="text-[8px] text-gray-600 mt-1">Last start time is 3:00 PM</p>
                 </div>
 
                 <div className="relative">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 block">Event End Time</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 block">Event End Time</label>
                   <div className="relative">
-                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                     <select
                       required
                       value={formData.end_time}
                       onChange={(e) => setFormData({...formData, end_time: e.target.value})}
-                      className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-xl text-sm font-bold focus:ring-4 focus:ring-[#B8860B]/5 focus:border-[#B8860B] outline-none transition-all appearance-none"
+                      className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-full py-4 pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-yellow-500 transition-all appearance-none"
                       disabled={!formData.start_time}
                     >
-                      <option value="">Select end time</option>
+                      <option value="" className="bg-[#1a1a2e]">Select end time</option>
                       {(() => {
                         if (!formData.start_time) return null;
                         const startHour = parseInt(formData.start_time.split(':')[0]);
@@ -1036,34 +972,31 @@ const BookNow = () => {
                         return allEndTimeOptions
                           .filter(option => parseInt(option.value.split(':')[0]) >= minEndHour)
                           .map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
+                            <option key={option.value} value={option.value} className="bg-[#1a1a2e]">{option.label}</option>
                           ));
                       })()}
                     </select>
                   </div>
-                  <p className="text-[8px] text-slate-400 mt-1">Minimum 2 hours duration</p>
+                  <p className="text-[8px] text-gray-600 mt-1">Minimum 2 hours duration</p>
                 </div>
               </div>
             </div>
 
-            {/* Preview ng Total Amount based sa input */}
             {formData.total_pax && parseInt(formData.total_pax) >= 50 && (
-              <div className="bg-[#B8860B]/5 p-4 rounded-xl border border-[#B8860B]/20">
+              <div className="bg-yellow-500/10 p-4 rounded-xl border border-yellow-500/20">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black uppercase text-gray-600">Total Amount:</span>
-                  <span className="font-bold text-xl text-[#B8860B]">
+                  <span className="text-[10px] font-black uppercase text-gray-400">Total Amount:</span>
+                  <span className="font-bold text-xl text-yellow-500">
                     ₱{(numericPrice * parseInt(formData.total_pax)).toLocaleString()}.00
                   </span>
                 </div>
                 <div className="flex justify-between items-center mt-1">
                   <span className="text-[8px] text-gray-500">Down Payment (20%):</span>
-                  <span className="text-xs font-bold text-[#B8860B]">
+                  <span className="text-xs font-bold text-yellow-500">
                     ₱{(numericPrice * parseInt(formData.total_pax) * 0.2).toLocaleString()}.00
                   </span>
                 </div>
-                <p className="text-[8px] text-gray-400 mt-2">
+                <p className="text-[8px] text-gray-500 mt-2">
                   * Down payment of 20% is required to confirm your booking.
                 </p>
               </div>
@@ -1072,7 +1005,7 @@ const BookNow = () => {
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] hover:bg-[#B8860B] active:scale-[0.98] transition-all shadow-xl shadow-black/10 disabled:opacity-50"
+              className="w-full bg-yellow-500 text-black py-5 rounded-full font-black uppercase tracking-[0.2em] text-[11px] hover:bg-yellow-400 active:scale-[0.98] transition-all shadow-xl shadow-yellow-500/20 disabled:opacity-50"
             >
               {isSubmitting ? "Processing..." : "Proceed to Payment"}
             </button>

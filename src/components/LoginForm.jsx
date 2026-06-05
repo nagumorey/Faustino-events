@@ -222,16 +222,16 @@ const LoginForm = ({ onForgotClick }) => {
   };
 
   return (
-    <div className="relative bg-white p-10 rounded-[3rem] w-full max-w-[380px] mx-auto shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+    <div className="relative bg-[#1a1a2e]/90 backdrop-blur-xl p-10 rounded-2xl w-full max-w-[380px] mx-auto shadow-2xl border border-yellow-500/30">
       {focusedElement && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm">
-          <Volume2 size={14} className="inline mr-2" />
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm border border-yellow-500/30">
+          <Volume2 size={14} className="inline mr-2 text-yellow-500" />
           {focusedElement}
         </div>
       )}
 
       {isListening && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[#D4AF37] text-black px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg">
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg shadow-yellow-500/20">
           <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
           <Mic size={14} />
           <span className="text-xs font-bold">Say a command...</span>
@@ -241,23 +241,23 @@ const LoginForm = ({ onForgotClick }) => {
       <div className="absolute -top-12 right-0">
         <button 
           onClick={startVoice}
-          className="mic-btn p-3 bg-[#D4AF37] rounded-full hover:bg-[#c4a137] transition-all shadow-lg"
+          className="mic-btn p-3 bg-yellow-500 rounded-full hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20"
           tabIndex={0}
           aria-label="Microphone button. Press Enter to activate voice commands."
         >
-          <Mic size={18} className="text-white" />
+          <Mic size={18} className="text-black" />
         </button>
       </div>
 
       <form onSubmit={handleLogin} className="space-y-6">
         <div className="text-left space-y-2">
-          <label className="text-[10px] font-black text-black uppercase tracking-tighter px-1">Email Address</label>
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter px-1">Email Address</label>
           <input 
             type="email" 
             placeholder="user@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="email-input w-full bg-[#f3f4f6] border-none p-5 rounded-2xl text-black text-xs outline-none placeholder:text-gray-400"
+            className="email-input w-full bg-white/10 border border-white/20 p-5 rounded-xl text-white text-xs outline-none placeholder:text-gray-500 focus:border-yellow-500 transition-all"
             required
             tabIndex={0}
             aria-label="Email address input field"
@@ -266,11 +266,11 @@ const LoginForm = ({ onForgotClick }) => {
         
         <div className="text-left space-y-2">
           <div className="flex justify-between items-center px-1">
-            <label className="text-[10px] font-black text-black uppercase tracking-tighter">Password</label>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Password</label>
             <button 
               type="button" 
               onClick={onForgotClick} 
-              className="forgot-btn text-[9px] font-bold text-[#D4AF37] uppercase tracking-tighter hover:underline"
+              className="forgot-btn text-[9px] font-bold text-yellow-500 uppercase tracking-tighter hover:text-yellow-400 transition-all"
               tabIndex={0}
               aria-label="Forgot password button"
             >
@@ -282,7 +282,7 @@ const LoginForm = ({ onForgotClick }) => {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="password-input w-full bg-[#f3f4f6] border border-[#D4AF37]/10 p-5 rounded-2xl text-black text-xs outline-none focus:ring-2 focus:ring-[#D4AF37]/20 transition-all"
+            className="password-input w-full bg-white/10 border border-white/20 p-5 rounded-xl text-white text-xs outline-none placeholder:text-gray-500 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all"
             required
             tabIndex={0}
             aria-label="Password input field"
@@ -292,7 +292,7 @@ const LoginForm = ({ onForgotClick }) => {
         <button 
           type="submit"
           disabled={loading}
-          className="login-btn w-full bg-[#D4AF37] text-white py-5 rounded-2xl font-black text-[14px] uppercase tracking-[0.15em] shadow-xl active:scale-95 transition-all mt-4"
+          className="login-btn w-full bg-yellow-500 text-black py-5 rounded-xl font-black text-sm uppercase tracking-[0.15em] shadow-xl shadow-yellow-500/20 active:scale-95 transition-all mt-4 hover:bg-yellow-400 disabled:opacity-50"
           tabIndex={0}
           aria-label="Log In button. Press Enter to submit."
         >
@@ -300,7 +300,7 @@ const LoginForm = ({ onForgotClick }) => {
         </button>
       </form>
 
-      <div className="mt-4 text-center text-[9px] text-gray-400">
+      <div className="mt-4 text-center text-[9px] text-gray-500">
         <p>Press TAB to navigate, ENTER to select</p>
         <p>Say "help" for voice commands</p>
       </div>

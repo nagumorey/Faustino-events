@@ -261,20 +261,20 @@ const SignupForm = () => {
     }
   };
 
-  const inputClass = "w-full bg-[#FAF9F6] border border-[#E5E1DA] p-2.5 rounded-lg outline-none focus:border-[#D4AF37] text-slate-800 text-xs transition-all placeholder:text-slate-300";
-  const labelClass = "text-[9px] font-bold text-slate-700 uppercase tracking-widest mb-1 block";
+  const inputClass = "w-full bg-white/10 border border-white/20 p-2.5 rounded-xl outline-none focus:border-yellow-500 text-white text-xs transition-all placeholder:text-gray-500";
+  const labelClass = "text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 block";
 
   return (
-    <div className="relative bg-white p-6 rounded-2xl w-full max-w-sm mx-auto shadow-2xl border border-slate-50">
+    <div className="relative bg-[#1a1a2e]/90 backdrop-blur-xl p-6 rounded-2xl w-full max-w-sm mx-auto shadow-2xl border border-yellow-500/30">
       {focusedElement && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm">
-          <Volume2 size={14} className="inline mr-2" />
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm border border-yellow-500/30">
+          <Volume2 size={14} className="inline mr-2 text-yellow-500" />
           {focusedElement}
         </div>
       )}
 
       {isListening && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[#D4AF37] text-black px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg">
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg shadow-yellow-500/20">
           <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
           <Mic size={14} />
           <span className="text-xs font-bold">Say a command...</span>
@@ -284,11 +284,11 @@ const SignupForm = () => {
       <div className="absolute -top-12 right-0">
         <button 
           onClick={startVoice}
-          className="mic-btn p-3 bg-[#D4AF37] rounded-full hover:bg-[#c4a137] transition-all shadow-lg"
+          className="mic-btn p-3 bg-yellow-500 rounded-full hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20"
           tabIndex={0}
           aria-label="Microphone button"
         >
-          <Mic size={18} className="text-white" />
+          <Mic size={18} className="text-black" />
         </button>
       </div>
 
@@ -377,14 +377,14 @@ const SignupForm = () => {
           </div>
         </div>
 
-        <div className="text-[8px] text-slate-400 font-medium text-right">
+        <div className="text-[8px] text-gray-500 font-medium text-right">
           {password.length}/6 characters
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="signup-btn w-full bg-[#D4AF37] hover:bg-black hover:text-white text-white py-3 rounded-xl font-bold text-[11px] mt-4 transition-all active:scale-[0.96] disabled:opacity-50 shadow-md uppercase tracking-widest"
+          className="signup-btn w-full bg-yellow-500 hover:bg-yellow-400 text-black py-3 rounded-xl font-bold text-[11px] mt-4 transition-all active:scale-[0.96] disabled:opacity-50 shadow-md shadow-yellow-500/20 uppercase tracking-widest"
           tabIndex={0}
           aria-label="Sign Up button"
         >
@@ -392,7 +392,7 @@ const SignupForm = () => {
         </button>
       </form>
 
-      <div className="mt-4 text-center text-[8px] text-gray-400">
+      <div className="mt-4 text-center text-[8px] text-gray-500">
         <p>Press TAB to navigate, ENTER to select</p>
         <p>Say "help" for voice commands</p>
       </div>

@@ -192,15 +192,12 @@ const ClientDashboard = () => {
             }
           }
           
-          // ✅ WALA NANG FALLBACK! Kapag walang coverImage, null lang.
-          // Hindi na gagamit ng default images.
-          
           return {
             id: event.event_id,
             title: event.event_name,
             price: `₱${Number(event.amount_per_pax).toLocaleString()}.00`,
             price_raw: Number(event.amount_per_pax),
-            image: coverImage, // Pwedeng null kung walang image
+            image: coverImage,
             all_images: allImages,
             details: event.event_description || `${event.event_name}`,
             ariaLabel: `${event.event_name} package, price ${event.amount_per_pax} pesos`
@@ -555,9 +552,9 @@ const ClientDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#B8860B] mb-4"></div>
-        <p>Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#16213e] flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mb-4"></div>
+        <p className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em]">Loading...</p>
         {error && <p className="text-red-500 text-sm mt-4">Error: {error}</p>}
       </div>
     );
@@ -565,9 +562,9 @@ const ClientDashboard = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#16213e] flex flex-col items-center justify-center">
         <p className="text-red-500 mb-4">Error: {error}</p>
-        <button onClick={() => window.location.reload()} className="bg-[#B8860B] text-white px-4 py-2 rounded">
+        <button onClick={() => window.location.reload()} className="bg-yellow-500 text-black px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider">
           Retry
         </button>
       </div>
@@ -575,31 +572,38 @@ const ClientDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#16213e]">
+      {/* Elegant Background Ornaments */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-40 w-80 h-80 bg-yellow-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 -right-40 w-96 h-96 bg-yellow-600/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-gradient-to-r from-yellow-500/5 to-transparent rounded-full blur-3xl"></div>
+      </div>
+
       {focusedElement && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm">
-          <Volume2 size={14} className="inline mr-2" />
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-xl text-white px-4 py-2 rounded-full z-50 text-sm border border-yellow-500/30">
+          <Volume2 size={14} className="inline mr-2 text-yellow-500" />
           {focusedElement}
         </div>
       )}
 
       {isListening && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[#B8860B] text-white px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg">
-          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black px-5 py-2 rounded-full z-50 flex items-center gap-2 shadow-lg">
+          <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
           <Mic size={14} />
           <span className="text-xs font-bold">Say a command...</span>
         </div>
       )}
 
-      <div className="fixed top-20 right-4 bg-slate-800 text-white p-3 rounded-xl z-40 text-xs max-w-xs">
-        <Keyboard size={14} className="inline mr-1" />
+      <div className="fixed top-20 right-4 bg-black/60 backdrop-blur-xl text-white p-3 rounded-xl z-40 text-xs max-w-xs border border-yellow-500/20">
+        <Keyboard size={14} className="inline mr-1 text-yellow-500" />
         <span className="font-bold">Accessibility:</span>
         <p className="mt-1">Press TAB to navigate, ENTER to select</p>
         <p>Press MIC button or say "mic" for voice commands</p>
         <p>Say "help" for all voice commands</p>
       </div>
 
-      <nav className="bg-white/90 backdrop-blur-xl border-b border-slate-100 px-6 py-5 sticky top-0 z-50">
+      <nav className="bg-black/40 backdrop-blur-xl border-b border-yellow-500/20 px-6 py-5 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div
             className="text-xl font-black tracking-tighter flex items-center gap-2 cursor-pointer"
@@ -607,25 +611,23 @@ const ClientDashboard = () => {
             tabIndex={0}
             aria-label="Faustino Events, home"
           >
-            <div className="w-1.5 h-6 bg-[#B8860B]"></div>
-            FAUSTINO{" "}
-            <span className="text-[#B8860B] italic text-lg">
-              EVENTS
-            </span>
+            <div className="w-1.5 h-6 bg-yellow-500"></div>
+            <span className="text-white">FAUSTINO</span>
+            <span className="text-yellow-500 italic text-lg">EVENTS</span>
           </div>
 
           <div className="flex items-center gap-4">
             {user ? (
               <>
                 <div className="hidden md:flex items-center">
-                  <span className="text-xs font-bold text-black">
+                  <span className="text-xs font-bold text-gray-300">
                     {profileData ? `${profileData.first_name} ${profileData.last_name}` : user.email}
                   </span>
                 </div>
 
                 <button
                   onClick={() => setIsProfileModalOpen(true)}
-                  className="profile-button px-4 py-2 rounded-xl bg-slate-50 hover:bg-[#B8860B] hover:text-white text-[10px] font-black uppercase transition-all"
+                  className="profile-button px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-yellow-500 hover:text-black text-[10px] font-black uppercase transition-all"
                   tabIndex={0}
                   aria-label={`${profileData ? profileData.first_name : ""} profile button. Press Enter to open your profile.`}
                 >
@@ -634,7 +636,7 @@ const ClientDashboard = () => {
 
                 <button
                   onClick={startVoice}
-                  className="mic-button p-2.5 rounded-xl transition-all bg-slate-50 text-slate-400 hover:bg-[#B8860B] hover:text-white"
+                  className="mic-button p-2.5 rounded-full transition-all bg-white/10 backdrop-blur-sm text-yellow-500 hover:bg-yellow-500 hover:text-black"
                   tabIndex={0}
                   aria-label="Microphone button. Press Enter to activate voice commands."
                 >
@@ -643,7 +645,7 @@ const ClientDashboard = () => {
 
                 <button
                   onClick={handleLogout}
-                  className="p-2.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all"
+                  className="p-2.5 bg-white/10 backdrop-blur-sm hover:bg-red-500/20 text-gray-400 hover:text-red-400 rounded-full transition-all"
                   tabIndex={0}
                   aria-label="Logout button. Press Enter to sign out."
                 >
@@ -653,7 +655,7 @@ const ClientDashboard = () => {
             ) : (
               <button
                 onClick={() => navigate("/")}
-                className="text-[10px] font-black bg-black text-white px-8 py-3 rounded-xl uppercase tracking-widest hover:bg-[#B8860B]"
+                className="text-[10px] font-black bg-yellow-500 text-black px-8 py-3 rounded-full uppercase tracking-widest hover:bg-yellow-400 transition-all"
                 tabIndex={0}
                 aria-label="Sign in button"
               >
@@ -664,200 +666,151 @@ const ClientDashboard = () => {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-6 py-10 relative z-10">
         <section className="mb-24">
           <div className="flex flex-col md:flex-row justify-between items-end gap-10 mb-16">
-            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.9]">
-              Premium <br />
-              <span className="text-[#B8860B]">
-                Packages
-              </span>
-            </h1>
-
+            <div>
+              <div className="inline-flex items-center gap-2 bg-yellow-500/10 backdrop-blur-sm px-4 py-2 rounded-full border border-yellow-500/20 mb-4">
+                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-yellow-500">Luxury Collection</span>
+              </div>
+              <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.9] text-white">
+                Premium <br />
+                <span className="bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">
+                  Packages
+                </span>
+              </h1>
+              <p className="text-gray-400 text-sm mt-6 max-w-md">Experience the finest event planning with our exclusive collection of luxury packages tailored to your special day.</p>
+            </div>
             <div className="relative w-full md:w-80">
               <input
                 type="text"
                 placeholder="Find an event..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-slate-100 rounded-2xl py-4 pl-6 pr-6 text-[11px] font-bold shadow-sm outline-none"
+                className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-full py-4 pl-6 pr-6 text-sm text-white placeholder:text-gray-400 font-medium outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-all"
                 tabIndex={0}
                 aria-label="Search events input"
               />
             </div>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {eventPackages.length > 0 ? (
-              eventPackages
-                .filter((pkg) =>
-                  pkg.title
-                    .toLowerCase()
-                    .includes(searchQuery.toLowerCase())
-                )
-                .map((pkg) => (
-                  <div
-                    key={pkg.id}
-                    className="package-card bg-white rounded-[2rem] border border-slate-100 p-8 flex flex-col shadow-sm cursor-pointer"
-                    tabIndex={0}
-                    aria-label={pkg.ariaLabel}
-                    onClick={() => {
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {eventPackages.length > 0 ? (
+            eventPackages
+              .filter((pkg) => pkg.title.toLowerCase().includes(searchQuery.toLowerCase()))
+              .map((pkg) => (
+                <div
+                  key={pkg.id}
+                  className="package-card bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-8 flex flex-col shadow-lg cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-yellow-500/50 hover:shadow-xl hover:shadow-yellow-500/10"
+                  tabIndex={0}
+                  aria-label={pkg.ariaLabel}
+                  onClick={() => {
+                    setSelectedPackage(pkg);
+                    setCurrentImageIndex(0);
+                    setIsModalOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
                       setSelectedPackage(pkg);
                       setCurrentImageIndex(0);
                       setIsModalOpen(true);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                    }
+                  }}
+                >
+                  <div className="h-64 w-full rounded-xl mb-6 bg-white/5 flex items-center justify-center overflow-hidden">
+                    {pkg.image ? (
+                      <img src={pkg.image} alt={pkg.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="text-center text-gray-400 text-[10px] font-bold uppercase p-4">📷 No Image Available</div>
+                    )}
+                  </div>
+                  <h3 className="package-title text-xl font-black uppercase mb-3 text-white group-hover:text-yellow-500 transition-colors">
+                    {pkg.title}
+                  </h3>
+                  <p className="text-gray-400 text-[10px] font-medium uppercase mb-8 flex-1">{pkg.details}</p>
+                  <div className="flex items-center justify-between pt-6 border-t border-white/10">
+                    <span className="package-price text-yellow-500 font-black text-xl">{pkg.price}</span>
+                    <button
+                      onClick={() => {
                         setSelectedPackage(pkg);
                         setCurrentImageIndex(0);
                         setIsModalOpen(true);
-                      }
-                    }}
-                  >
-                    {/* ✅ BAGONG IMAGE SECTION: Kapag walang image, "No Image" ang display */}
-                    <div className="h-64 w-full rounded-2xl mb-6 bg-slate-100 flex items-center justify-center overflow-hidden">
-                      {pkg.image ? (
-                        <img
-                          src={pkg.image}
-                          alt={pkg.title}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-center text-slate-400 text-[10px] font-bold uppercase p-4">
-                          📷 No Image Available
-                        </div>
-                      )}
-                    </div>
-
-                    <h3 className="package-title text-xl font-black uppercase mb-3">
-                      {pkg.title}
-                    </h3>
-
-                    <p className="text-slate-400 text-[10px] font-bold uppercase mb-8 flex-1">
-                      {pkg.details}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-6 border-t border-slate-50">
-                      <span className="package-price text-[#B8860B] font-black text-xl">
-                        {pkg.price}
-                      </span>
-
-                      <button
-                        onClick={() => {
-                          setSelectedPackage(pkg);
-                          setCurrentImageIndex(0);
-                          setIsModalOpen(true);
-                        }}
-                        className="p-3 bg-black text-white rounded-xl hover:bg-[#B8860B] transition-all"
-                        aria-label={`View ${pkg.title} details`}
-                      >
-                        <ArrowRight size={18} />
-                      </button>
-                    </div>
+                      }}
+                      className="p-3 bg-yellow-500 text-black rounded-full hover:bg-yellow-400 transition-all"
+                      aria-label={`View ${pkg.title} details`}
+                    >
+                      <ArrowRight size={18} />
+                    </button>
                   </div>
-                ))
-            ) : (
-              <div className="col-span-3 text-center py-20">
-                <p className="text-slate-400 text-sm">No available packages at the moment.</p>
-              </div>
-            )}
-          </div>
-        </section>
+                </div>
+              ))
+          ) : (
+            <div className="col-span-3 text-center py-20">
+              <p className="text-gray-400 text-sm">No available packages at the moment.</p>
+            </div>
+          )}
+        </div>
 
         <section id="my-bookings-section" className="mt-32 scroll-mt-24">
-          <h2 className="text-3xl font-black uppercase mb-12">
-            MY BOOKINGS
-          </h2>
+          <div className="mb-12">
+            <div className="inline-flex items-center gap-2 bg-yellow-500/10 backdrop-blur-sm px-4 py-2 rounded-full border border-yellow-500/20 mb-4">
+              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-yellow-500">Your Reservations</span>
+            </div>
+            <h2 className="text-3xl font-black uppercase tracking-tighter text-white">
+              MY <span className="text-yellow-500">BOOKINGS</span>
+            </h2>
+            <div className="w-20 h-0.5 bg-gradient-to-r from-yellow-500 to-transparent mt-4"></div>
+          </div>
 
           {user && myBookings.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {myBookings.map((item) => {
                 const isCancellable = item.booking_status !== "Cancelled" && item.booking_status !== "Completed";
-                
                 return (
-                  <div
-                    key={item.booking_id}
-                    className="booking-card bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm"
-                    tabIndex={0}
-                    aria-label={`Booking ${item.booking_status}, date ${new Date(item.event_date).toLocaleDateString()}`}
-                  >
-                    <div
-                      className={`booking-status px-5 py-2 text-[8px] font-black uppercase ${
-                        item.booking_status === "Approved"
-                          ? "bg-green-500"
-                          : item.booking_status === "Cancelled"
-                          ? "bg-red-500"
-                          : item.booking_status === "Pending"
-                          ? "bg-yellow-500"
-                          : "bg-orange-400"
-                      } text-white inline-block mb-4`}
-                    >
+                  <div key={item.booking_id} className="booking-card bg-white/10 backdrop-blur-sm p-8 rounded-2xl border border-white/20 shadow-lg hover:shadow-xl hover:border-yellow-500/30 transition-all duration-300">
+                    <div className={`booking-status px-5 py-2 text-[8px] font-black uppercase rounded-full inline-block mb-4 ${
+                      item.booking_status === "Approved" ? "bg-green-500/20 text-green-400 border border-green-500/30" :
+                      item.booking_status === "Cancelled" ? "bg-red-500/20 text-red-400 border border-red-500/30" :
+                      item.booking_status === "Pending" ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" :
+                      "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                    }`}>
                       {item.booking_status || "PENDING"}
                     </div>
-
-                    <h4 className="booking-date text-lg font-black uppercase">
-                      {new Date(item.event_date).toLocaleDateString()}
-                    </h4>
-
+                    <h4 className="booking-date text-lg font-black uppercase text-white">{new Date(item.event_date).toLocaleDateString()}</h4>
                     <div className="flex items-center gap-4 mt-4">
-                      <Clock size={14} className="text-slate-400" />
-                      <span className="text-[10px] font-bold uppercase">
-                        Appt: {item.appointment_time} | Event: {item.start_time} - {item.end_time}
-                      </span>
+                      <Clock size={14} className="text-gray-400" />
+                      <span className="text-[10px] font-bold uppercase text-gray-300">Appt: {item.appointment_time} | Event: {item.start_time} - {item.end_time}</span>
                     </div>
-
-                    <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                    <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
                       <div>
-                        <p className="text-[9px] text-slate-400">Total Amount</p>
-                        <p className="font-black text-[#B8860B]">₱{item.amount?.toLocaleString() || 0}</p>
+                        <p className="text-[9px] text-gray-400">Total Amount</p>
+                        <p className="font-black text-yellow-500">₱{item.amount?.toLocaleString() || 0}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[9px] text-slate-400">Payment Status</p>
+                        <p className="text-[9px] text-gray-400">Payment Status</p>
                         <p className={`font-bold text-xs ${
-                          item.payment_status === "Paid" ? "text-green-600" :
-                          item.payment_status === "Partial" ? "text-yellow-600" : 
-                          item.payment_status === "Refund Pending" ? "text-orange-600" :
-                          item.payment_status === "Refunded" ? "text-blue-600" : "text-red-600"
+                          item.payment_status === "Paid" ? "text-green-400" :
+                          item.payment_status === "Partial" ? "text-yellow-400" : 
+                          item.payment_status === "Refund Pending" ? "text-orange-400" :
+                          item.payment_status === "Refunded" ? "text-blue-400" : "text-red-400"
                         }`}>
                           {item.payment_status || "Pending"}
                         </p>
                       </div>
                     </div>
-
                     <div className="flex gap-3 mt-4">
-                      <button
-                        onClick={() => {
-                          setSelectedBooking(item);
-                          setShowReceiptModal(true);
-                        }}
-                        className="view-receipt-btn flex-1 bg-[#B8860B] text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-[#9a7009] transition-all flex items-center justify-center gap-1"
-                        aria-label="View receipt"
-                      >
-                        <FileText size={12} />
-                        View Receipt
+                      <button onClick={() => { setSelectedBooking(item); setShowReceiptModal(true); }} className="view-receipt-btn flex-1 bg-yellow-500 text-black py-2 rounded-full text-[9px] font-black uppercase tracking-wider hover:bg-yellow-400 transition-all flex items-center justify-center gap-1">
+                        <FileText size={12} /> View Receipt
                       </button>
                       {item.payment_status !== "Paid" && item.payment_status !== "Refunded" && item.booking_status !== "Cancelled" && (
-                        <button
-                          onClick={() =>
-                            setPaymentModal({
-                              open: true,
-                              booking: item,
-                            })
-                          }
-                          className="flex-1 bg-black text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-gray-800 transition-all"
-                          aria-label={`Pay for booking on ${new Date(item.event_date).toLocaleDateString()}`}
-                        >
+                        <button onClick={() => setPaymentModal({ open: true, booking: item })} className="flex-1 bg-white/20 text-white py-2 rounded-full text-[9px] font-black uppercase tracking-wider hover:bg-yellow-500 hover:text-black transition-all">
                           Pay Now
                         </button>
                       )}
                       {isCancellable && item.booking_status !== "Cancelled" && (
-                        <button
-                          onClick={() => handleCancelBooking(item)}
-                          className="cancel-booking-btn flex-1 bg-red-500 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-red-600 transition-all flex items-center justify-center gap-1"
-                          aria-label="Cancel booking"
-                        >
-                          <Trash2 size={12} />
-                          Cancel
+                        <button onClick={() => handleCancelBooking(item)} className="cancel-booking-btn flex-1 bg-red-500/20 text-red-400 py-2 rounded-full text-[9px] font-black uppercase tracking-wider hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1 border border-red-500/30">
+                          <Trash2 size={12} /> Cancel
                         </button>
                       )}
                     </div>
@@ -866,177 +819,87 @@ const ClientDashboard = () => {
               })}
             </div>
           ) : (
-            <div className="bg-white p-12 rounded-[2rem] border border-slate-100 text-center">
-              <p className="text-slate-400">No bookings yet</p>
+            <div className="bg-white/10 backdrop-blur-sm p-16 rounded-2xl border border-white/20 text-center">
+              <p className="text-gray-400">No bookings yet. Start planning your dream event!</p>
             </div>
           )}
         </section>
       </main>
 
       {isProfileModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <ClientProfile 
-            onClose={handleProfileClose}
-          />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <ClientProfile onClose={handleProfileClose} />
         </div>
       )}
 
       {showReceiptModal && selectedBooking && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-          <BookingReceipt 
-            booking={selectedBooking}
-            onClose={() => {
-              setShowReceiptModal(false);
-              setSelectedBooking(null);
-            }}
-          />
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto">
+          <BookingReceipt booking={selectedBooking} onClose={() => { setShowReceiptModal(false); setSelectedBooking(null); }} />
         </div>
       )}
 
       {isModalOpen && selectedPackage && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => {
-              setIsModalOpen(false);
-              setCurrentImageIndex(0);
-            }}
-          ></div>
-
-          <div className="bg-white rounded-[2.5rem] w-full max-w-4xl relative z-10 p-10 max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => {
-                setIsModalOpen(false);
-                setCurrentImageIndex(0);
-              }}
-              className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full z-20"
-              tabIndex={0}
-              aria-label="Close package"
-            >
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => { setIsModalOpen(false); setCurrentImageIndex(0); }}></div>
+          <div className="bg-[#1a1a2e]/90 backdrop-blur-xl rounded-2xl w-full max-w-4xl relative z-10 p-10 max-h-[90vh] overflow-y-auto border border-yellow-500/30 shadow-2xl">
+            <button onClick={() => { setIsModalOpen(false); setCurrentImageIndex(0); }} className="absolute top-6 right-6 p-2 bg-white/10 rounded-full hover:bg-yellow-500 hover:text-black transition-all z-20 text-gray-400">
               <X size={18} />
             </button>
-
             <div className="mb-6">
-              <h3 className="text-sm font-bold uppercase text-slate-400 mb-3">GALLERY</h3>
-              
+              <h3 className="text-sm font-bold uppercase text-yellow-500 mb-3">GALLERY</h3>
               {selectedPackage.all_images && selectedPackage.all_images.length > 0 ? (
                 <div className="relative">
-                  <div className="relative h-96 bg-slate-100 rounded-2xl overflow-hidden">
-                    <img
-                      src={selectedPackage.all_images[currentImageIndex]?.image_url}
-                      alt={`${selectedPackage.title} - Image ${currentImageIndex + 1}`}
-                      className="w-full h-full object-contain"
-                    />
-                    
+                  <div className="relative h-96 bg-black/30 rounded-xl overflow-hidden">
+                    <img src={selectedPackage.all_images[currentImageIndex]?.image_url} alt={`${selectedPackage.title}`} className="w-full h-full object-contain" />
                     {selectedPackage.all_images.length > 1 && (
                       <>
-                        <button
-                          onClick={prevImage}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
-                          aria-label="Previous image"
-                        >
+                        <button onClick={prevImage} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-yellow-500 text-white hover:text-black p-2 rounded-full transition-all">
                           <ChevronLeft size={24} />
                         </button>
-                        <button
-                          onClick={nextImage}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
-                          aria-label="Next image"
-                        >
+                        <button onClick={nextImage} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-yellow-500 text-white hover:text-black p-2 rounded-full transition-all">
                           <ChevronRight size={24} />
                         </button>
                       </>
                     )}
                   </div>
-                  
                   <div className="flex gap-2 mt-3 overflow-x-auto pb-2 justify-center">
                     {selectedPackage.all_images.map((img, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentImageIndex(idx)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
-                          currentImageIndex === idx ? 'border-[#B8860B]' : 'border-slate-200 hover:border-slate-400'
-                        }`}
-                      >
-                        <img
-                          src={img.image_url}
-                          alt={`Thumbnail ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
+                      <button key={idx} onClick={() => setCurrentImageIndex(idx)} className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${currentImageIndex === idx ? 'border-yellow-500' : 'border-white/20 hover:border-white/40'}`}>
+                        <img src={img.image_url} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
-                  
-                  <p className="text-[10px] text-slate-400 mt-2 text-center">
-                    {currentImageIndex + 1} of {selectedPackage.all_images.length} images
-                  </p>
+                  <p className="text-[10px] text-gray-400 mt-2 text-center">{currentImageIndex + 1} of {selectedPackage.all_images.length} images</p>
                 </div>
               ) : (
-                <div className="h-96 bg-slate-100 rounded-2xl flex items-center justify-center">
-                  <div className="text-center text-slate-400 text-sm font-bold uppercase p-4">
-                    📷 No Images Available for this Package
-                  </div>
+                <div className="h-96 bg-white/5 rounded-xl flex items-center justify-center">
+                  <div className="text-center text-gray-400 text-sm font-bold uppercase p-4">📷 No Images Available for this Package</div>
                 </div>
               )}
             </div>
-
-            <h2 className="text-3xl font-black uppercase mb-4">
-              {selectedPackage.title}
-            </h2>
-
-            <p className="text-slate-500 mb-6">
-              {selectedPackage.details}
-            </p>
-
-            <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-black uppercase mb-4 text-white">{selectedPackage.title}</h2>
+            <p className="text-gray-300 mb-6">{selectedPackage.details}</p>
+            <div className="flex items-center justify-between mb-8 p-6 bg-white/5 rounded-xl border border-white/10">
               <div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">Price per Pax</p>
-                <p className="text-2xl font-black text-[#B8860B]">{selectedPackage.price}</p>
+                <p className="text-[10px] text-gray-400 uppercase font-bold">Price per Pax</p>
+                <p className="text-2xl font-black text-yellow-500">{selectedPackage.price}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-400 uppercase font-bold">Minimum Pax</p>
+                <p className="text-xl font-black text-white">50 Guests</p>
               </div>
             </div>
-
-            <button
-              onClick={() => handleBooking(selectedPackage)}
-              className="w-full bg-black text-white py-4 rounded-xl font-black uppercase hover:bg-[#B8860B] transition-all"
-              tabIndex={0}
-              aria-label="Reserve this package"
-            >
-              Reserve Package
-            </button>
+            <button onClick={() => handleBooking(selectedPackage)} className="w-full bg-yellow-500 text-black py-4 rounded-full font-black uppercase tracking-wide hover:bg-yellow-400 transition-all">Reserve Package</button>
           </div>
         </div>
       )}
 
       {paymentModal.open && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() =>
-              setPaymentModal({
-                open: false,
-                booking: null,
-              })
-            }
-          ></div>
-
-          <div className="relative z-10 w-full max-w-md bg-white rounded-3xl p-6">
-            <ClientPayment
-              bookingId={paymentModal.booking.booking_id}
-              totalAmount={paymentModal.booking.amount}
-            />
-
-            <button
-              onClick={() =>
-                setPaymentModal({
-                  open: false,
-                  booking: null,
-                })
-              }
-              className="mt-4 w-full text-[10px] font-black uppercase text-slate-400"
-              tabIndex={0}
-              aria-label="Close payment"
-            >
-              Close
-            </button>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setPaymentModal({ open: false, booking: null })}></div>
+          <div className="relative z-10 w-full max-w-md bg-[#1a1a2e]/90 backdrop-blur-xl rounded-2xl p-6 border border-yellow-500/30 shadow-2xl">
+            <ClientPayment bookingId={paymentModal.booking.booking_id} totalAmount={paymentModal.booking.amount} />
+            <button onClick={() => setPaymentModal({ open: false, booking: null })} className="mt-4 w-full text-[10px] font-black uppercase text-gray-400 hover:text-white transition-colors">Close</button>
           </div>
         </div>
       )}

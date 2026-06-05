@@ -170,9 +170,9 @@ const ClientProfile = ({ onClose, onProfileUpdate }) => {
 
   if (!profile) {
     return (
-      <div className="bg-white rounded-[2rem] w-full max-w-md p-10 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B] mx-auto"></div>
-        <p className="mt-4 text-sm">Loading profile...</p>
+      <div className="bg-[#1a1a2e]/90 backdrop-blur-xl rounded-2xl w-full max-w-md p-10 text-center border border-yellow-500/30">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto"></div>
+        <p className="mt-4 text-sm text-gray-400">Loading profile...</p>
       </div>
     );
   }
@@ -185,22 +185,22 @@ const ClientProfile = ({ onClose, onProfileUpdate }) => {
   };
 
   return (
-    <div className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl">
+    <div className="bg-[#1a1a2e]/90 backdrop-blur-xl rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-yellow-500/30">
       {voiceFeedback && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-4 py-2 rounded-full z-50 text-sm border border-yellow-500/30">
           {voiceFeedback}
         </div>
       )}
 
-      <div className="bg-gradient-to-r from-[#B8860B] to-[#DAA520] p-6 text-white">
+      <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-6 text-black">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-black uppercase tracking-wider">Profile</h2>
+            <h2 className="text-2xl font-black uppercase tracking-wider">PROFILE</h2>
             <p className="text-xs opacity-90 mt-1">Manage your account</p>
           </div>
           <button 
             onClick={handleClose}
-            className="close-profile-btn p-1 hover:bg-white/20 rounded-full transition-all"
+            className="close-profile-btn p-1 hover:bg-black/20 rounded-full transition-all"
             aria-label="Close profile. Press Enter to close."
             tabIndex={0}
           >
@@ -215,149 +215,155 @@ const ClientProfile = ({ onClose, onProfileUpdate }) => {
         {isEditing ? (
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">First Name</label>
+              <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">First Name</label>
               <input 
                 type="text"
                 value={formData.first_name} 
                 onChange={(e) => setFormData({...formData, first_name: e.target.value})} 
-                className="first-name-input w-full bg-slate-50 p-3 rounded-xl font-bold outline-none border-2 border-transparent focus:border-[#B8860B] transition-all"
+                className="first-name-input w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white font-bold outline-none focus:border-yellow-500 transition-all placeholder:text-gray-500"
                 placeholder="Enter first name"
                 tabIndex={0}
                 aria-label="First name input field"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Last Name</label>
+              <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Last Name</label>
               <input 
                 type="text"
                 value={formData.last_name} 
                 onChange={(e) => setFormData({...formData, last_name: e.target.value})} 
-                className="last-name-input w-full bg-slate-50 p-3 rounded-xl font-bold outline-none border-2 border-transparent focus:border-[#B8860B] transition-all"
+                className="last-name-input w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white font-bold outline-none focus:border-yellow-500 transition-all placeholder:text-gray-500"
                 placeholder="Enter last name"
                 tabIndex={0}
                 aria-label="Last name input field"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Phone Number</label>
+              <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Phone Number</label>
               <input 
                 type="tel"
                 value={formData.phone_number} 
                 onChange={(e) => setFormData({...formData, phone_number: e.target.value})} 
-                className="phone-input w-full bg-slate-50 p-3 rounded-xl font-bold outline-none border-2 border-transparent focus:border-[#B8860B] transition-all"
+                className="phone-input w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white font-bold outline-none focus:border-yellow-500 transition-all placeholder:text-gray-500"
                 placeholder="Enter phone number"
                 tabIndex={0}
                 aria-label="Phone number input field"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Email</label>
-              <div className="bg-slate-100 p-3 rounded-xl">
-                <p className="font-bold text-sm text-slate-600">{profile.email}</p>
+              <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Email</label>
+              <div className="bg-white/10 border border-white/20 rounded-xl p-3">
+                <p className="font-bold text-sm text-gray-300">{profile.email}</p>
               </div>
-              <p className="text-[8px] text-slate-400 mt-1">Email cannot be changed</p>
+              <p className="text-[8px] text-gray-500 mt-1">Email cannot be changed</p>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="bg-gradient-to-r from-slate-50 to-white p-4 rounded-xl">
+            {/* Profile Header */}
+            <div className="bg-gradient-to-r from-yellow-500/10 to-transparent p-4 rounded-xl border border-yellow-500/20">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-[#B8860B]/20 rounded-full flex items-center justify-center">
-                  <span className="text-xl font-black text-[#B8860B]">
+                <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center border border-yellow-500/30">
+                  <span className="text-xl font-black text-yellow-500">
                     {formData.first_name?.charAt(0)}{formData.last_name?.charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-black text-lg">{formData.first_name} {formData.last_name}</h3>
-                  <p className="text-xs text-slate-500">Client</p>
+                  <h3 className="font-black text-lg text-white">{formData.first_name} {formData.last_name}</h3>
+                  <p className="text-xs text-gray-400">Client</p>
                 </div>
               </div>
             </div>
 
-            <div className="border-b border-slate-100 pb-3">
+            {/* Email */}
+            <div className="border-b border-white/10 pb-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400">Email Address</p>
-                  <p className="font-bold text-sm">{profile.email}</p>
+                  <p className="text-[10px] font-black uppercase text-gray-400">EMAIL ADDRESS</p>
+                  <p className="font-bold text-sm text-white">{profile.email}</p>
                 </div>
               </div>
             </div>
 
-            <div className="border-b border-slate-100 pb-3">
+            {/* Full Name */}
+            <div className="border-b border-white/10 pb-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400">Full Name</p>
-                  <p className="font-bold text-sm">{formData.first_name} {formData.last_name}</p>
+                  <p className="text-[10px] font-black uppercase text-gray-400">FULL NAME</p>
+                  <p className="font-bold text-sm text-white">{formData.first_name} {formData.last_name}</p>
                 </div>
               </div>
             </div>
 
-            <div className="border-b border-slate-100 pb-3">
+            {/* Phone Number */}
+            <div className="border-b border-white/10 pb-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10px] font-black uppercase text-slate-400">Phone Number</p>
-                  <p className="font-bold text-sm">{formData.phone_number || "Not provided"}</p>
+                  <p className="text-[10px] font-black uppercase text-gray-400">PHONE NUMBER</p>
+                  <p className="font-bold text-sm text-white">{formData.phone_number || "Not provided"}</p>
                 </div>
               </div>
             </div>
 
+            {/* Password */}
             <div className="pb-2">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10px] font-black uppercase text-slate-400">Password</p>
-                  <p className="font-bold text-sm">********</p>
+                  <p className="text-[10px] font-black uppercase text-gray-400">PASSWORD</p>
+                  <p className="font-bold text-sm text-white">********</p>
                 </div>
                 <button 
                   onClick={handleChangePassword}
-                  className="change-password-btn text-[9px] text-[#B8860B] font-bold uppercase hover:underline"
+                  className="change-password-btn text-[9px] text-yellow-500 font-bold uppercase hover:text-yellow-400"
                   tabIndex={0}
                   aria-label="Change password button. Press Enter to reset your password."
                 >
-                  Change
+                  CHANGE
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
+        {/* Action Buttons */}
+        <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
           {isEditing ? (
             <>
               <button 
                 onClick={handleSave} 
                 disabled={isSaving}
-                className="save-profile-btn flex-1 bg-gradient-to-r from-[#B8860B] to-[#DAA520] text-white py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="save-profile-btn flex-1 bg-yellow-500 text-black py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-yellow-400 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-yellow-500/20"
                 tabIndex={0}
                 aria-label="Save changes button. Press Enter to save your profile."
               >
                 {isSaving ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                 ) : (
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 )}
-                {isSaving ? "Saving..." : "Save Changes"}
+                {isSaving ? "Saving..." : "SAVE CHANGES"}
               </button>
               <button 
                 onClick={() => {
@@ -369,11 +375,11 @@ const ClientProfile = ({ onClose, onProfileUpdate }) => {
                   });
                   speak("Edit cancelled");
                 }}
-                className="cancel-btn flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-slate-200 transition-all"
+                className="cancel-btn flex-1 bg-white/10 text-gray-300 py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-white/20 transition-all border border-white/20"
                 tabIndex={0}
                 aria-label="Cancel button. Press Enter to cancel editing."
               >
-                Cancel
+                CANCEL
               </button>
             </>
           ) : (
@@ -383,22 +389,22 @@ const ClientProfile = ({ onClose, onProfileUpdate }) => {
                   setIsEditing(true);
                   speak("Edit mode enabled. First name input focused.");
                 }} 
-                className="edit-profile-btn flex-1 bg-black text-white py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-[#B8860B] transition-all flex items-center justify-center gap-2"
+                className="edit-profile-btn flex-1 bg-yellow-500 text-black py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-yellow-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/20"
                 tabIndex={0}
                 aria-label="Edit profile button. Press Enter to edit your information."
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
-                Edit Profile
+                EDIT PROFILE
               </button>
               <button 
                 onClick={handleClose}
-                className="close-profile-btn flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-slate-200 transition-all"
+                className="close-profile-btn flex-1 bg-white/10 text-gray-300 py-3 rounded-xl font-black uppercase text-xs tracking-wider hover:bg-white/20 transition-all border border-white/20"
                 tabIndex={0}
                 aria-label="Close profile button. Press Enter to close."
               >
-                Close
+                CLOSE
               </button>
             </>
           )}

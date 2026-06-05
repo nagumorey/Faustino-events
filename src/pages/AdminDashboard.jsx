@@ -363,9 +363,9 @@ const AdminDashboard = () => {
   const days = getDaysInMonth(currentMonth);
 
   const stats = [
-    { label: "Bookings", value: counts.bookings.toString(), icon: <Calendar size={18} />, color: "bg-red-500", path: "/AdminBookings" },
+    { label: "Bookings", value: counts.bookings.toString(), icon: <Calendar size={18} />, color: "bg-yellow-500", path: "/AdminBookings" },
     { label: "Events", value: counts.events.toString(), icon: <Star size={18} />, color: "bg-green-500", path: "/AdminEvents" },
-    { label: "Registered Clients", value: counts.clients.toString(), icon: <Users size={18} />, color: "bg-yellow-500", path: "/AdminUsers" },
+    { label: "Registered Clients", value: counts.clients.toString(), icon: <Users size={18} />, color: "bg-blue-500", path: "/AdminUsers" },
     { label: "Total Revenue", value: `₱${counts.revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`, icon: <CreditCard size={18} />, color: "bg-[#1e293b]", path: "/AdminDashboard" },
   ];
 
@@ -376,69 +376,72 @@ const AdminDashboard = () => {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#16213e] flex flex-col items-center justify-center">
       <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p className="text-white text-[10px] font-bold tracking-[0.3em] uppercase opacity-50">Loading Dashboard...</p>
+      <p className="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase">Loading Dashboard...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex font-sans text-slate-800">
-      <aside className="w-64 bg-black p-6 flex flex-col shadow-xl">
-        <div className="mb-10 px-2 text-white italic">
-          <h2 className="font-black tracking-tighter text-xl">FAUSTINO'S</h2>
-          <p className="text-[10px] text-slate-500 font-bold tracking-widest mt-1 uppercase">Admin Panel</p>
+    <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] to-[#16213e] flex font-sans">
+      {/* Sidebar */}
+      <aside className="w-64 bg-black/40 backdrop-blur-xl p-6 flex flex-col shadow-xl border-r border-yellow-500/20">
+        <div className="mb-10 px-2">
+          <h2 className="font-black tracking-tighter text-xl bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">FAUSTINO'S</h2>
+          <p className="text-[10px] text-gray-500 font-bold tracking-widest mt-1 uppercase">Admin Panel</p>
         </div>
 
         <nav className="space-y-2 flex-1">
-          <button onClick={() => navigate("/AdminDashboard")} className="flex items-center gap-3 w-full p-3 rounded-lg bg-white/10 text-white text-[11px] font-bold uppercase tracking-widest transition-all">
-            <LayoutDashboard size={16} className="text-yellow-500" /> Dashboard
+          <button onClick={() => navigate("/AdminDashboard")} className="flex items-center gap-3 w-full p-3 rounded-lg bg-yellow-500/20 text-yellow-500 text-[11px] font-bold uppercase tracking-widest transition-all">
+            <LayoutDashboard size={16} /> Dashboard
           </button>
-          <button onClick={() => navigate("/AdminEvents")} className="flex items-center gap-3 w-full p-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all">
+          <button onClick={() => navigate("/AdminEvents")} className="flex items-center gap-3 w-full p-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all">
             <Star size={16} /> Event
           </button>
-          <button onClick={() => navigate("/AdminBookings")} className="flex items-center gap-3 w-full p-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all">
+          <button onClick={() => navigate("/AdminBookings")} className="flex items-center gap-3 w-full p-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all">
             <Calendar size={16} /> Booking
           </button>
-          <button onClick={() => navigate("/AdminUsers")} className="flex items-center gap-3 w-full p-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all">
+          <button onClick={() => navigate("/AdminUsers")} className="flex items-center gap-3 w-full p-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all">
             <Users size={16} /> User
           </button>
         </nav>
 
-        <div className="border-t border-slate-800 pt-4 space-y-2">
-          <button onClick={() => navigate("/AdminProfile")} className="flex items-center gap-3 w-full p-3 text-slate-400 hover:text-white text-[11px] font-bold uppercase tracking-widest transition-all">
+        <div className="border-t border-white/10 pt-4 space-y-2">
+          <button onClick={() => navigate("/AdminProfile")} className="flex items-center gap-3 w-full p-3 text-gray-400 hover:text-white text-[11px] font-bold uppercase tracking-widest transition-all">
             <User size={16} /> Profile
           </button>
-          <button onClick={handleLogout} className="flex items-center gap-3 w-full p-3 text-slate-500 hover:text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors">
+          <button onClick={handleLogout} className="flex items-center gap-3 w-full p-3 text-gray-500 hover:text-red-500 text-[11px] font-bold uppercase tracking-widest transition-colors">
             <LogOut size={16} /> Logout
           </button>
         </div>
       </aside>
 
+      {/* Main Content */}
       <main className="flex-1 p-8 overflow-y-auto">
-        <header className="flex justify-between items-center mb-10 bg-black text-white p-4 rounded-xl shadow-lg relative">
-          <h2 className="text-xs font-bold tracking-[0.3em] uppercase ml-4">EMS Dashboard</h2>
+        {/* Header */}
+        <header className="flex justify-between items-center mb-10 bg-black/40 backdrop-blur-xl border border-yellow-500/20 p-4 rounded-xl shadow-lg">
+          <h2 className="text-xs font-bold tracking-[0.3em] uppercase text-gray-400 ml-4">EMS Dashboard</h2>
           <div className="mr-4 flex items-center gap-6">
             <div className="relative">
               <button 
                 onClick={handleToggleDropdown} 
                 className="relative p-2 hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center"
               >
-                <Bell size={18} className="text-slate-300 hover:text-white transition-colors" />
+                <Bell size={18} className="text-gray-400 hover:text-yellow-500 transition-colors" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-black text-white ring-2 ring-black">
+                  <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-black text-white ring-2 ring-black/40">
                     {unreadCount}
                   </span>
                 )}
               </button>
 
               {isNotifOpen && (
-                <div className="absolute right-0 mt-4 w-80 max-h-96 overflow-y-auto bg-white text-slate-800 rounded-2xl border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-4 space-y-3 z-50">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Notifications</h4>
+                <div className="absolute right-0 mt-4 w-80 max-h-96 overflow-y-auto bg-[#1a1a2e]/90 backdrop-blur-xl text-white rounded-2xl border border-yellow-500/30 shadow-2xl p-4 space-y-3 z-50">
+                  <div className="flex items-center justify-between border-b border-yellow-500/20 pb-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-wider text-yellow-500">Notifications</h4>
                   </div>
                   {notifications.length === 0 ? (
-                    <p className="text-slate-400 text-xs py-4 text-center font-medium">No notifications yet.</p>
+                    <p className="text-gray-400 text-xs py-4 text-center font-medium">No notifications yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {notifications.map((notif) => (
@@ -446,20 +449,20 @@ const AdminDashboard = () => {
                           key={notif.notification_id} 
                           className={`p-3 rounded-xl border transition-all flex items-start justify-between gap-3 ${
                             notif.is_read 
-                              ? "bg-slate-50/50 border-slate-100 opacity-60" 
-                              : "bg-amber-50/30 border-amber-100 shadow-sm"
+                              ? "bg-white/5 border-white/10 opacity-60" 
+                              : "bg-yellow-500/10 border-yellow-500/30 shadow-sm"
                           }`}
                         >
                           <div className="space-y-1 flex-1">
-                            <p className="text-xs font-bold text-slate-800 leading-snug">{notif.message}</p>
-                            <p className="text-[9px] font-medium text-slate-400">
+                            <p className="text-xs font-bold text-white leading-snug">{notif.message}</p>
+                            <p className="text-[9px] font-medium text-gray-400">
                               {new Date(notif.created_at).toLocaleDateString()} at {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
                           {!notif.is_read && (
                             <button 
                               onClick={() => markAsRead(notif.notification_id)}
-                              className="p-1 bg-white hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-md border border-slate-200 transition-colors shrink-0"
+                              className="p-1 bg-white/10 hover:bg-yellow-500 text-gray-400 hover:text-black rounded-md border border-white/20 transition-colors shrink-0"
                             >
                               <Check size={12} />
                             </button>
@@ -474,46 +477,49 @@ const AdminDashboard = () => {
 
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">System Live</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">System Live</span>
             </div>
           </div>
         </header>
 
+        {/* Welcome Section */}
         <div className="mb-10">
-          <h1 className="text-4xl font-serif font-bold text-[#1e293b]">Welcome Admin!</h1>
-          <p className="text-slate-400 text-sm mt-1 font-medium italic">Manage your events, bookings, and analytics from this panel.</p>
+          <h1 className="text-4xl font-serif font-bold bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">Welcome Admin!</h1>
+          <p className="text-gray-400 text-sm mt-1 font-medium italic">Manage your events, bookings, and analytics from this panel.</p>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           {stats.map((s, i) => (
-            <div key={i} onClick={() => navigate(s.path)} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-all group cursor-pointer hover:-translate-y-1">
+            <div key={i} onClick={() => navigate(s.path)} className="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 flex flex-col justify-between hover:shadow-xl hover:border-yellow-500/50 transition-all group cursor-pointer hover:-translate-y-1">
               <div className="flex justify-between items-start mb-6">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-black transition-colors">{s.label}</h3>
-                <div className={`${s.color} p-2.5 rounded-xl text-white shadow-lg shadow-slate-200 group-hover:scale-110 transition-transform`}>{s.icon}</div>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-yellow-500 transition-colors">{s.label}</h3>
+                <div className={`${s.color} p-2.5 rounded-xl text-white shadow-lg shadow-black/20 group-hover:scale-110 transition-transform`}>{s.icon}</div>
               </div>
               <div>
-                <p className="text-3xl font-bold text-slate-800 tracking-tighter">{s.value}</p>
-                <div className="w-full bg-slate-100 h-1 rounded-full mt-4 overflow-hidden">
-                  <div className={`${s.color} h-full opacity-20`} style={{width: '100%'}}></div>
+                <p className="text-3xl font-bold text-white tracking-tighter">{s.value}</p>
+                <div className="w-full bg-white/10 h-1 rounded-full mt-4 overflow-hidden">
+                  <div className={`${s.color} h-full opacity-30`} style={{width: '100%'}}></div>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-10">
-          <div className="bg-gradient-to-r from-[#1e293b] to-[#0f172a] px-6 py-4 flex justify-between items-center">
+        {/* Calendar Section */}
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden mb-10">
+          <div className="bg-gradient-to-r from-black/40 to-black/20 px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <Calendar size={20} className="text-[#DAA520]" />
+              <Calendar size={20} className="text-yellow-500" />
               <h3 className="text-white font-bold uppercase tracking-wider text-sm">Approved Schedules Calendar</h3>
             </div>
             <div className="flex items-center gap-4">
               <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
-                <ChevronLeft size={20} className="text-white" />
+                <ChevronLeft size={20} className="text-gray-400 hover:text-yellow-500" />
               </button>
               <span className="text-white font-bold">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</span>
               <button onClick={() => changeMonth(1)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
-                <ChevronRight size={20} className="text-white" />
+                <ChevronRight size={20} className="text-gray-400 hover:text-yellow-500" />
               </button>
             </div>
           </div>
@@ -521,7 +527,7 @@ const AdminDashboard = () => {
           <div className="p-6">
             <div className="grid grid-cols-7 gap-2 mb-4">
               {weekDays.map((day, idx) => (
-                <div key={idx} className="text-center text-[10px] font-black uppercase text-slate-400 py-2">
+                <div key={idx} className="text-center text-[10px] font-black uppercase text-gray-500 py-2">
                   {day}
                 </div>
               ))}
@@ -536,19 +542,19 @@ const AdminDashboard = () => {
                     className={`min-h-[100px] p-2 rounded-xl border transition-all ${
                       day 
                         ? hasBookings 
-                          ? 'bg-[#B8860B]/10 border-[#B8860B]/30 cursor-pointer hover:bg-[#B8860B]/20' 
-                          : 'bg-white border-slate-100 hover:border-slate-200'
-                        : 'bg-slate-50/30 border-slate-50'
+                          ? 'bg-yellow-500/10 border-yellow-500/30 cursor-pointer hover:bg-yellow-500/20' 
+                          : 'bg-white/5 border-white/10 hover:border-white/20'
+                        : 'bg-white/5 border-white/10 opacity-30'
                     }`}
                   >
                     {day && (
                       <>
                         <div className="flex justify-between items-start">
-                          <span className={`text-xs font-bold ${hasBookings ? 'text-[#B8860B]' : 'text-slate-500'}`}>
+                          <span className={`text-xs font-bold ${hasBookings ? 'text-yellow-500' : 'text-gray-400'}`}>
                             {day}
                           </span>
                           {hasBookings && (
-                            <span className="text-[8px] font-black bg-[#B8860B] text-white px-1.5 py-0.5 rounded-full">
+                            <span className="text-[8px] font-black bg-yellow-500 text-black px-1.5 py-0.5 rounded-full">
                               {bookingsOnDay.length}
                             </span>
                           )}
@@ -556,12 +562,12 @@ const AdminDashboard = () => {
                         {hasBookings && (
                           <div className="mt-2 space-y-1">
                             {bookingsOnDay.slice(0, 2).map((booking, bIdx) => (
-                              <div key={bIdx} className="text-[9px] font-medium text-slate-600 truncate" title={`${booking.client_first_name} ${booking.client_last_name} - ${booking.start_time || booking.appointment_time}`}>
+                              <div key={bIdx} className="text-[9px] font-medium text-gray-300 truncate" title={`${booking.client_first_name} ${booking.client_last_name} - ${booking.start_time || booking.appointment_time}`}>
                                 {(booking.start_time || booking.appointment_time)?.substring(0,5)} {booking.client_first_name}
                               </div>
                             ))}
                             {bookingsOnDay.length > 2 && (
-                              <div className="text-[8px] text-[#B8860B] font-bold">
+                              <div className="text-[8px] text-yellow-500 font-bold">
                                 +{bookingsOnDay.length - 2} more
                               </div>
                             )}
@@ -575,42 +581,43 @@ const AdminDashboard = () => {
             </div>
           </div>
           
-          <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/30 flex justify-between items-center">
+          <div className="border-t border-white/10 px-6 py-4 bg-white/5 flex justify-between items-center">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-[#B8860B]/20 rounded border border-[#B8860B]/30"></div>
-                <span className="text-[9px] text-slate-500">With Approved Bookings</span>
+                <div className="w-3 h-3 bg-yellow-500/20 rounded border border-yellow-500/30"></div>
+                <span className="text-[9px] text-gray-400">With Approved Bookings</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-white rounded border border-slate-200"></div>
-                <span className="text-[9px] text-slate-500">No Bookings</span>
+                <div className="w-3 h-3 bg-white/5 rounded border border-white/20"></div>
+                <span className="text-[9px] text-gray-400">No Bookings</span>
               </div>
             </div>
-            <div className="text-[9px] text-slate-400">
+            <div className="text-[9px] text-gray-500">
               Total Upcoming: {approvedBookings.length} bookings
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+        {/* Bookings Table */}
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/20 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              {showArchived ? <History size={16} className="text-slate-500" /> : <Calendar size={16} className="text-slate-500" />}
-              <h3 className="font-bold uppercase tracking-wider text-sm text-slate-700">
+              {showArchived ? <History size={16} className="text-gray-400" /> : <Calendar size={16} className="text-gray-400" />}
+              <h3 className="font-bold uppercase tracking-wider text-sm text-white">
                 {showArchived ? "Event History / Archive" : "Upcoming Approved Events"}
               </h3>
             </div>
             <button
               onClick={() => setShowArchived(!showArchived)}
-              className="text-[9px] font-bold text-[#B8860B] hover:underline flex items-center gap-1"
+              className="text-[9px] font-bold text-yellow-500 hover:underline flex items-center gap-1"
             >
               {showArchived ? "← View Upcoming" : "View History →"}
             </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50">
-                <tr className="text-[9px] font-black uppercase text-slate-400">
+              <thead className="bg-white/5">
+                <tr className="text-[9px] font-black uppercase text-gray-400">
                   <th className="px-6 py-3">Date</th>
                   <th className="px-6 py-3">Time</th>
                   <th className="px-6 py-3">Client</th>
@@ -619,22 +626,22 @@ const AdminDashboard = () => {
                   <th className="px-6 py-3">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-white/10">
                 {(showArchived ? completedBookings : approvedBookings).slice(0, 10).map((booking) => (
-                  <tr key={booking.booking_id} className="hover:bg-slate-50/50 transition-colors text-sm">
-                    <td className="px-6 py-3 font-mono text-xs">{booking.event_date}</td>
-                    <td className="px-6 py-3 text-xs">{(booking.start_time || booking.appointment_time)?.substring(0,5)} - {booking.end_time?.substring(0,5)}</td>
+                  <tr key={booking.booking_id} className="hover:bg-white/5 transition-colors text-sm">
+                    <td className="px-6 py-3 font-mono text-xs text-gray-300">{booking.event_date}</td>
+                    <td className="px-6 py-3 text-xs text-gray-300">{(booking.start_time || booking.appointment_time)?.substring(0,5)} - {booking.end_time?.substring(0,5)}</td>
                     <td className="px-6 py-3">
                       <div>
-                        <p className="font-medium text-slate-800">{booking.client_first_name} {booking.client_last_name}</p>
-                        <p className="text-[9px] text-slate-400">{booking.client_email}</p>
+                        <p className="font-medium text-white">{booking.client_first_name} {booking.client_last_name}</p>
+                        <p className="text-[9px] text-gray-400">{booking.client_email}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-3 text-xs">{booking.event_type || booking.event_name}</td>
-                    <td className="px-6 py-3 text-xs">{booking.total_pax} pax</td>
+                    <td className="px-6 py-3 text-xs text-gray-300">{booking.event_type || booking.event_name}</td>
+                    <td className="px-6 py-3 text-xs text-gray-300">{booking.total_pax} pax</td>
                     <td className="px-6 py-3">
                       <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase ${
-                        showArchived ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'
+                        showArchived ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'
                       }`}>
                         {showArchived ? 'Completed' : 'Approved'}
                       </span>
@@ -643,7 +650,7 @@ const AdminDashboard = () => {
                 ))}
                 {(showArchived ? completedBookings : approvedBookings).length === 0 && (
                   <tr>
-                    <td colSpan="6" className="px-6 py-10 text-center text-slate-400 text-xs uppercase">
+                    <td colSpan="6" className="px-6 py-10 text-center text-gray-500 text-xs uppercase">
                       {showArchived ? "No completed events yet" : "No approved bookings yet"}
                     </td>
                   </tr>
@@ -652,8 +659,8 @@ const AdminDashboard = () => {
             </table>
           </div>
           {(showArchived ? completedBookings : approvedBookings).length > 10 && (
-            <div className="px-6 py-3 border-t border-slate-100 text-right">
-              <button onClick={() => navigate("/AdminBookings")} className="text-[9px] font-bold text-[#B8860B] hover:underline">
+            <div className="px-6 py-3 border-t border-white/20 text-right">
+              <button onClick={() => navigate("/AdminBookings")} className="text-[9px] font-bold text-yellow-500 hover:underline">
                 View all {(showArchived ? completedBookings : approvedBookings).length} {(showArchived ? "completed" : "approved")} bookings →
               </button>
             </div>

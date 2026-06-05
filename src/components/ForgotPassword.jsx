@@ -116,9 +116,9 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
 
   return (
     <div className="w-full max-w-md mx-auto relative z-50">
-      <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 text-black">
+      <div className="bg-[#1a1a2e]/90 backdrop-blur-xl p-8 md:p-10 rounded-2xl shadow-2xl border border-yellow-500/30">
         <div className="text-center space-y-2 mb-8">
-          <h3 className="text-2xl font-black uppercase tracking-tighter">
+          <h3 className="text-2xl font-black uppercase tracking-tighter bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">
             {step === 'request' ? 'Recover Account' : 'New Password'}
           </h3>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
@@ -129,37 +129,37 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
         <form className="space-y-6" onSubmit={step === 'request' ? handleRecover : handleUpdatePassword}>
           {step === 'request' ? (
             <div className="space-y-2">
-              <label className="text-[11px] font-black uppercase tracking-widest block ml-1">Email Address</label>
+              <label className="text-[11px] font-black uppercase tracking-widest block ml-1 text-gray-400">Email Address</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#f9f9f9] border border-gray-200 p-4 rounded-2xl text-[12px] outline-none focus:border-[#d4af37]/50 transition-all"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-yellow-500 transition-all"
                 placeholder="user@example.com"
               />
             </div>
           ) : (
             <>
               <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-widest block ml-1">New Password</label>
+                <label className="text-[11px] font-black uppercase tracking-widest block ml-1 text-gray-400">New Password</label>
                 <input
                   type="password"
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-[#f9f9f9] border border-gray-200 p-4 rounded-2xl text-[12px] outline-none focus:border-[#d4af37]/50 transition-all"
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-yellow-500 transition-all"
                   placeholder="••••••••"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-widest block ml-1">Confirm Password</label>
+                <label className="text-[11px] font-black uppercase tracking-widest block ml-1 text-gray-400">Confirm Password</label>
                 <input
                   type="password"
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-[#f9f9f9] border border-gray-200 p-4 rounded-2xl text-[12px] outline-none focus:border-[#d4af37]/50 transition-all"
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-yellow-500 transition-all"
                   placeholder="••••••••"
                 />
               </div>
@@ -170,7 +170,7 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#d4af37] text-white py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.1em] hover:opacity-90 transition-all disabled:opacity-50"
+              className="w-full bg-yellow-500 text-black py-4 rounded-2xl text-xs font-black uppercase tracking-[0.1em] hover:bg-yellow-400 transition-all disabled:opacity-50 shadow-lg shadow-yellow-500/20"
             >
               {loading ? "Processing..." : (step === 'request' ? "Send Link" : "Update Password")}
             </button>
@@ -180,7 +180,7 @@ export default function ForgotPassword({ isOpen, onClose, onForceOpen }) {
                 onClose();
               }}
               type="button"
-              className="text-[10px] font-black uppercase text-gray-400 hover:text-black transition-all text-center tracking-[0.2em]"
+              className="text-[10px] font-black uppercase text-gray-500 hover:text-yellow-500 transition-all text-center tracking-[0.2em]"
             >
               Cancel
             </button>
